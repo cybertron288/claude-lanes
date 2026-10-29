@@ -1,0 +1,21 @@
+name = "cc-status-light"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+
+[[durable_objects.bindings]]
+name = "HUB"
+class_name = "StatusHub"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["StatusHub"]
+
+[triggers]
+crons = ["0 * * * *"]
+
+# MQTT_TOPIC, INGEST_TOKEN, GITHUB_TOKEN and GITHUB_USERNAME are secrets
+# (bunx wrangler secret put <NAME>). The topic name is the only thing that
+# keeps the public panel topic private, so it is never committed.
+[vars]
+BROKER_URL = "wss://broker.emqx.io:8084/mqtt"
+BRIGHTNESS = "128"
