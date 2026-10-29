@@ -1,0 +1,5 @@
+{
+  "name": "cc-status-light",
+  "owner": { "name": "cybertron288" },
+  "plugins": [{ "name": "cc-status-light", "source": "./mod/cc-status-light" }]
+}

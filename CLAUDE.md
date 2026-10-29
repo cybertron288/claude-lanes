@@ -2,26 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Status
-
-Design stage. The only code is `sim/sim.ts`, a starting-point simulator. Two
-documents define the project:
-
-- Spec: `docs/superpowers/specs/2026-10-29-cc-status-light-design.md`. Decisions
-  there are settled. Do not re-argue them.
-- Plan: `docs/superpowers/plans/2026-10-29-cc-status-light.md`. Eight tasks,
-  executed in order with `superpowers:subagent-driven-development` or
-  `superpowers:executing-plans`. Work goes on `feat/status-light`, branched from
-  `docs/design`.
-
-Task 1 is a spike that gates everything else. If it finds no "approved, tool now
-running" signal, stop and ask Ravi before building.
-
 ## What it is
 
 Claude Code session status on a 16×8 WLED LED matrix. Each interactive session
 gets a lane. A full-panel amber pulse means a session waits for approval. With no
-live sessions, the panel shows the GitHub contribution graph.
+live sessions, the panel shows the GitHub contribution graph. `README.md` has
+setup; the spec (`docs/superpowers/specs/2026-10-29-cc-status-light-design.md`)
+holds settled decisions, and the plan (`docs/superpowers/plans/`) the build order.
 
 ## Architecture
 
@@ -29,75 +16,74 @@ live sessions, the panel shows the GitHub contribution graph.
 Claude Code mod (each Mac) ─HTTPS+bearer─▶ Cloudflare Worker + Durable Object
                                               │ composes WLED JSON state
                                               ▼
-                          public MQTT broker (WSS, retained) ─▶ WLED (plaintext 1883)
+                     public MQTT broker (WSS, retained) ─▶ WLED (plaintext 1883)
 ```
 
-- **Mod** (`mod/cc-status-light/`): derives terminal state from engine events
-  (`tool.check`, `tool.call`, `turn.*`, `session.*`) and POSTs state changes only.
-  Owns `/led-color`. Built with the `plugin-authoring` skill; its
-  `types/claude-code.d.ts` is the API reference. The mod cannot import outside its
-  folder, so `ClientEvent` and `parseColor` are copied in and must stay identical
-  to `shared/protocol.ts` and `worker/src/palette.ts`.
-- **Worker** (`worker/`): one `StatusHub` Durable Object is the single source of
-  truth for lanes, states and colors. Pure modules (`lanes.ts` reducer,
-  `palette.ts`, `compose.ts`) do the logic; `hub.ts` wraps a testable
-  `StatusHubCore(store, publisher, clock)`. Publishes on change, plus an alarm
-  republish every 15 min. Hourly cron refreshes the contribution graph.
-- **MQTT** (`worker/src/mqtt.ts`): hand-written MQTT 3.1.1 encoders over
-  WebSocket. No client library.
+- **Mod** (`mod/cc-status-light/hooks/`): `register.ts` wires engine events into
+  `tracker.ts` (pure lane state machine) and `reporter.ts` (debounced, serial,
+  retrying sender). Built with the `plugin-authoring` skill; the engine lays its
+  API types in `.claude-plugin/types/` (self-gitignored). Which events mean
+  "dialog open" and "answered" is in `spike/approval-signal/FINDINGS.md`: read it
+  before touching the wiring.
+  - Dialog open: `tool.check` with `tool_use_id`, `approver: 'person'` and verdict
+    `ask` (`isDialogAsk`), counted only after a 1 s grace (auto mode answers
+    `ask` and then approves silently).
+  - Answered: a `ToolGroup`/`ToolUse` render with `isRunning: true` for that id,
+    or the `tool.call` result at the latest. Subagent calls never render.
+  - `turn.*` events with `agentId` are subagent loops; ignore them for base state.
+  - Never use `classic.*` events: `cc-plugin-sec-default` swallows them on
+    Ravi's machines.
+  - `protocol.ts` copies `shared/protocol.ts` and `parseColor` (a mod cannot
+    import outside its folder); `worker/test/mod-copy.test.ts` keeps them equal.
+- **Worker** (`worker/src/`): `index.ts` is the entry; `routes.ts` does auth and
+  validation; `do.ts` is the `StatusHub` Durable Object, a thin wrapper over
+  `StatusHubCore` in `hub.ts`. The core serializes hub writes and publishes, and
+  each publish composes the latest state. Pure logic: `lanes.ts` (reducer),
+  `palette.ts`, `compose.ts`. `do.ts` imports `cloudflare:workers`, so tests
+  never import it; `cloudflare.d.ts` types that module for `tsc`.
+- **Segment ids** are stable: lane slot s → state `2s`, strip `2s+1`; takeover
+  `10`; idle or black `11`. Every frame sends all 12, unused ones as
+  `{ id, stop: 0 }`, and always `on: true` (WLED drops pixels when one request
+  turns it on and sets them).
+- **MQTT** (`worker/src/mqtt.ts`): hand-written MQTT 3.1.1 over WebSocket. Broker
+  is `broker.emqx.io` (HiveMQ's public broker stalled CONNACK in testing).
 - **Contribution graph** (`worker/src/contrib/`): ported from
-  `cybertron288/contrib-matrix` (`github.ts`, `grid.ts`, `ramp.ts`) with its tests.
-- **Simulator** (`sim/sim.ts`): a fake WLED on `http://localhost:8091` (`PORT`
-  overrides). The browser page at `/` polls `/frame` and draws the 16×8 grid.
-  - Today it takes `POST /json/state` over HTTP. It merges segments by `id`, and
-    `stop: 0` deletes a segment. It reads `start/stop/startY/stopY`, `fx`, `col`
-    and `i` (RGB or hex pixels).
-  - Its `fx` ids are its own (0 solid, 1 blink, 2 breathe, 3 upward wave), not
-    real WLED ids. Task 2 chooses the real ids in `worker/src/effects.ts`, and the
-    sim must then map them.
-  - Plan Task 3 makes it subscribe to `${MQTT_TOPIC}/api` over WSS instead.
-  - Sample frames live in `sim/fixtures/`: `lanes.json` and `takeover.json`.
+  `cybertron288/contrib-matrix` with its tests.
+- **Simulator** (`sim/sim.ts`): fake WLED. Subscribes to `${MQTT_TOPIC}/api` like
+  the panel, also takes `POST /json/state`, and draws at `/`. Effect looks are
+  mapped from `FX` in `worker/src/effects.ts`.
 
 ## Invariants
 
-- The mod must never delay or fail a tool call. Never `await` a network call
-  inside a `tool.call` / `tool.check` chain. Reporter is debounced and swallows
-  errors.
-- Report only interactive sessions (a person can approve). Never `claude -p`, SDK
-  or background runs.
-- Lanes key on a terminal key stable across `/clear` and resume, not on
-  `session_id`. Waiting holds while any `tool_use_id` for that terminal is open.
-- Nothing leaves a Mac except `{terminal, state | color}`. No paths, prompts or
-  repo names. MQTT payloads carry only WLED state.
+- The mod must never delay or fail a tool call: no network `await` inside a
+  `tool.call` / `tool.check` hook, and those hooks carry a pass-through `.catch`.
+- Report only interactive sessions (`session.start` `isInteractive === true`).
+- Lanes key on a terminal key, held in a module variable (survives `/clear`,
+  `/resume`) mirrored into `$.state` (survives a reload).
+- Nothing leaves a Mac except `{terminal, state | color}`. MQTT payloads carry
+  only WLED state. The topic is a secret: never commit or print it.
 - Layout: lanes 2 columns wide at x = 0, 3, 6, 9, 12 (max 5; a 6th is tracked
   with `slot: null`). Rows 0–5 show state, rows 6–7 the color strip.
-- Random strip colors exclude red, amber, green and blue hue bands. Tool failures
-  alone never turn a lane red.
 
 ## Commands
 
-Bun only. These two work now:
+Bun only.
 
 ```bash
-bun sim/sim.ts                                           # simulator on :8091
-curl -X POST localhost:8091/json/state -d @sim/fixtures/lanes.json   # push a frame
-```
-
-The rest come from the plan and don't exist yet:
-
-```bash
-bun test                                  # all unit tests
-bun test worker/test/lanes.test.ts        # one test file
-bunx tsc --noEmit                         # type-check
+bun test                                  # Worker tests (bunfig.toml roots them in worker/)
+bun test worker/test/lanes.test.ts        # one file
 claude plugin test mod/cc-status-light    # mod tests
+bunx tsc --noEmit                         # type-check shared/, worker/, scripts/, sim/
+bunx tsc -p mod/cc-status-light           # type-check the mod (after the engine laid its types)
 claude plugin validate mod/cc-status-light
-claude --plugin-dir mod/cc-status-light   # load mod live
-bun scripts/publish.ts sim/fixtures/lanes.json   # push a frame to the panel
-cd worker && bunx wrangler deploy         # ask Ravi before first deploy
+claude --plugin-dir mod/cc-status-light   # load the mod live
+bun sim/sim.ts                            # simulator on :8091 (PORT overrides)
+bun scripts/publish.ts sim/fixtures/lanes.json   # publish a frame to the topic
+cd worker && bunx wrangler dev            # local Worker; secrets in worker/.dev.vars
+cd worker && bunx wrangler deploy         # ask Ravi first: it touches his Cloudflare account
 ```
 
-`scripts/publish.ts` and the sim read `BROKER_URL` (default
-`wss://broker.hivemq.com:8884/mqtt`) and `MQTT_TOPIC` from `.env` (gitignored).
-The topic name is the only secret.
+`scripts/publish.ts` and the sim read `MQTT_TOPIC` and `BROKER_URL` from `.env`
+(gitignored).
 
 Anything about how the physical panel looks goes back to Ravi to confirm.
