@@ -1,7 +1,7 @@
 # Claude Code status light: design
 
 Date: 2026-10-29
-Repo: `cybertron288/cc-status-light` (new; private by default, **builder's call**)
+Repo: `cybertron288/claude-lanes` (renamed from `cc-status-light`; private by default, **builder's call**)
 
 ## Intent
 

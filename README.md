@@ -1,6 +1,7 @@
-# cc-status-light
+# claude-lanes
 
-Claude Code session status on a 16×8 WLED LED matrix.
+Claude Code session status on a 16×8 WLED LED matrix. The mod inside is
+`cc-status-light`.
 
 Each interactive Claude Code session gets a 1-column lane. The top 6 rows show
 its state, and the bottom 2 rows are its color strip:
@@ -60,7 +61,7 @@ the contribution graph every hour.
 At the prompt of a terminal Claude Code session:
 
 ```
-/plugin install cc-status-light --marketplace cybertron288/cc-status-light
+/plugin install cc-status-light --marketplace cybertron288/claude-lanes
 ```
 
 Answer `y` to add the marketplace, then pick a scope. On the options screen, set:
@@ -69,7 +70,7 @@ Answer `y` to add the marketplace, then pick a scope. On the options screen, set
 - **Ingest token**: the `INGEST_TOKEN` you set
 
 From a shell, the same install is
-`claude plugin install cc-status-light --marketplace cybertron288/cc-status-light`.
+`claude plugin install cc-status-light --marketplace cybertron288/claude-lanes`.
 The repository is private, so the machine needs a git credential for github.com
 (`gh auth login`, then `gh auth setup-git`).
 
