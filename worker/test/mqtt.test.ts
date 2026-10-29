@@ -1,5 +1,35 @@
 import { describe, expect, test } from "bun:test";
-import { encodeConnect, encodeDisconnect, encodePublish } from "../src/mqtt";
+import { decodePublish, encodeConnect, encodeDisconnect, encodePublish, encodeSubscribe } from "../src/mqtt";
+
+describe("encodeSubscribe", () => {
+  test("starts 0x82 and requests QoS 0", () => {
+    const packet = encodeSubscribe("t", 1);
+    expect(packet[0]).toBe(0x82);
+    expect(packet[packet.length - 1]).toBe(0);
+  });
+
+  test("carries the packet id and topic", () => {
+    expect([...encodeSubscribe("t", 1)]).toEqual([0x82, 6, 0, 1, 0, 1, 0x74, 0]);
+  });
+});
+
+describe("decodePublish", () => {
+  test("round-trips encodePublish", () => {
+    expect(decodePublish(encodePublish("a/api", '{"on":true}', { retain: true }))).toEqual({
+      topic: "a/api",
+      payload: '{"on":true}',
+    });
+  });
+
+  test("reads a payload past 127 bytes (two-byte remaining length)", () => {
+    const payload = "y".repeat(300);
+    expect(decodePublish(encodePublish("t", payload, { retain: false }))?.payload).toBe(payload);
+  });
+
+  test("returns null for a CONNACK", () => {
+    expect(decodePublish(new Uint8Array([0x20, 0x02, 0, 0]))).toBeNull();
+  });
+});
 
 describe("encodePublish", () => {
   test("retained QoS 0 publish starts 0x31", () => {

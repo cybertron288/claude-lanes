@@ -35,6 +35,27 @@ export function encodeDisconnect(): Uint8Array {
   return new Uint8Array([0xe0, 0]);
 }
 
+export function encodeSubscribe(topic: string, packetId: number): Uint8Array {
+  return packet(0x82, [packetId >> 8, packetId & 0xff, ...utf8(topic), 0]);
+}
+
+export function encodePingReq(): Uint8Array {
+  return new Uint8Array([0xc0, 0]);
+}
+
+export function decodePublish(bytes: Uint8Array): { topic: string; payload: string } | null {
+  if ((bytes[0]! & 0xf0) !== 0x30) return null;
+  let at = 1;
+  while (bytes[at]! & 0x80) at++;
+  at++;
+  const topicLen = (bytes[at]! << 8) | bytes[at + 1]!;
+  at += 2;
+  const topic = new TextDecoder().decode(bytes.slice(at, at + topicLen));
+  at += topicLen;
+  if ((bytes[0]! >> 1) & 0x03) at += 2; // QoS > 0 carries a packet id
+  return { topic, payload: new TextDecoder().decode(bytes.slice(at)) };
+}
+
 async function bytesOf(data: unknown): Promise<Uint8Array> {
   if (data instanceof ArrayBuffer) return new Uint8Array(data);
   if (data instanceof Uint8Array) return data;
