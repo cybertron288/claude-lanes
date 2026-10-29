@@ -25,24 +25,24 @@ describe("apply", () => {
     expect(hub.lanes[0]!.slot).toBe(0);
   });
 
-  test("a 6th terminal gets slot null", () => {
-    const hub = withTerminals(6);
-    expect(hub.lanes.map((l) => l.slot)).toEqual([0, 1, 2, 3, 4, null]);
+  test("a 9th terminal gets slot null", () => {
+    const hub = withTerminals(9);
+    expect(hub.lanes.map((l) => l.slot)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, null]);
   });
 
   test("end removes the lane and the first slot-null lane in arrival order takes its slot", () => {
-    let hub = withTerminals(7);
+    let hub = withTerminals(10);
     hub = apply(hub, { kind: "end", terminal: "t2" }, 100, pick);
     expect(hub.lanes.find((l) => l.terminal === "t2")).toBeUndefined();
-    expect(hub.lanes.find((l) => l.terminal === "t5")!.slot).toBe(2);
-    expect(hub.lanes.find((l) => l.terminal === "t6")!.slot).toBeNull();
+    expect(hub.lanes.find((l) => l.terminal === "t8")!.slot).toBe(2);
+    expect(hub.lanes.find((l) => l.terminal === "t9")!.slot).toBeNull();
   });
 
   test("promotion follows arrival order, not lastSeen", () => {
-    let hub = withTerminals(7);
-    hub = apply(hub, { kind: "state", terminal: "t6", state: "done" }, 50, pick);
+    let hub = withTerminals(10);
+    hub = apply(hub, { kind: "state", terminal: "t9", state: "done" }, 50, pick);
     hub = apply(hub, { kind: "end", terminal: "t0" }, 100, pick);
-    expect(hub.lanes.find((l) => l.terminal === "t5")!.slot).toBe(0);
+    expect(hub.lanes.find((l) => l.terminal === "t8")!.slot).toBe(0);
   });
 
   test("end for an unknown terminal returns the hub unchanged", () => {
@@ -65,12 +65,12 @@ describe("apply", () => {
 
 describe("expire", () => {
   test("removes a lane idle for 12 h + 1 ms and reassigns its slot", () => {
-    let hub = withTerminals(6, 0);
-    hub = apply(hub, { kind: "state", terminal: "t5", state: "done" }, H12, pick);
-    for (const t of ["t1", "t2", "t3", "t4"]) hub = apply(hub, { kind: "state", terminal: t, state: "done" }, H12, pick);
+    let hub = withTerminals(9, 0);
+    hub = apply(hub, { kind: "state", terminal: "t8", state: "done" }, H12, pick);
+    for (const t of ["t1", "t2", "t3", "t4", "t5", "t6", "t7"]) hub = apply(hub, { kind: "state", terminal: t, state: "done" }, H12, pick);
     hub = expire(hub, H12 + 1);
     expect(hub.lanes.find((l) => l.terminal === "t0")).toBeUndefined();
-    expect(hub.lanes.find((l) => l.terminal === "t5")!.slot).toBe(0);
+    expect(hub.lanes.find((l) => l.terminal === "t8")!.slot).toBe(0);
   });
 
   test("keeps a lane idle for 12 h − 1 ms", () => {
@@ -79,6 +79,6 @@ describe("expire", () => {
   });
 });
 
-test("slotX spaces lanes 3 columns apart", () => {
-  expect([0, 1, 2, 3, 4].map(slotX)).toEqual([0, 3, 6, 9, 12]);
+test("slotX spaces lanes 2 columns apart", () => {
+  expect([0, 1, 2, 3, 4, 5, 6, 7].map(slotX)).toEqual([0, 2, 4, 6, 8, 10, 12, 14]);
 });

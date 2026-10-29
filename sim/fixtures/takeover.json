@@ -1,15 +1,1 @@
-{"on":true,"bri":128,"seg": [
-    {"id":10,"start":0,"stop":16,"startY":0,"stopY":6,"fx":2,"sx":128,"ix":128,"col":[[255,150,0]]},
-    {"id":3,"start":3,"stop":5,"startY":6,"stopY":8,"fx":0,"sx":128,"ix":128,"col":[[170,90,255]]},
-    {"id":0,"stop":0},
-    {"id":1,"stop":0},
-    {"id":2,"stop":0},
-    {"id":4,"stop":0},
-    {"id":5,"stop":0},
-    {"id":6,"stop":0},
-    {"id":7,"stop":0},
-    {"id":8,"stop":0},
-    {"id":9,"stop":0},
-    {"id":11,"stop":0}
-  ]
-}
+{"on":true,"bri":128,"seg":[{"id":0,"start":0,"stop":16,"startY":0,"stopY":6,"fx":2,"sx":128,"ix":128,"m12":0,"mY":false,"col":[[255,150,0]]},{"id":1,"stop":0},{"id":2,"stop":0},{"id":3,"start":2,"stop":3,"startY":6,"stopY":8,"fx":0,"sx":128,"ix":128,"m12":0,"mY":false,"col":[[170,90,255]]},{"id":4,"stop":0},{"id":5,"stop":0},{"id":6,"stop":0},{"id":7,"stop":0},{"id":8,"stop":0},{"id":9,"stop":0},{"id":10,"stop":0},{"id":11,"start":10,"stop":11,"startY":6,"stopY":8,"fx":0,"sx":128,"ix":128,"m12":0,"mY":false,"col":[[0,160,140]]},{"id":12,"stop":0},{"id":13,"stop":0},{"id":14,"stop":0},{"id":15,"stop":0}]}

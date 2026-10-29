@@ -2,12 +2,12 @@
 
 Claude Code session status on a 16×8 WLED LED matrix.
 
-Each interactive Claude Code session gets a 2-column lane. The top 6 rows show
+Each interactive Claude Code session gets a 1-column lane. The top 6 rows show
 its state, and the bottom 2 rows are its color strip:
 
 | State | Look |
 |---|---|
-| working | blue upward shimmer |
+| working | blue sonar: pulses leave the lane center up and down |
 | done | dim steady green |
 | error | red blink (an API error ended the turn; failed tool calls do not count) |
 

@@ -41,8 +41,9 @@ Claude Code mod (each Mac) ─HTTPS+bearer─▶ Cloudflare Worker + Durable Obj
   each publish composes the latest state. Pure logic: `lanes.ts` (reducer),
   `palette.ts`, `compose.ts`. `do.ts` imports `cloudflare:workers`, so tests
   never import it; `cloudflare.d.ts` types that module for `tsc`.
-- **Segment ids** are stable: lane slot s → state `2s`, strip `2s+1`; takeover
-  `10`; idle or black `11`. Every frame sends all 12, unused ones as
+- **Segment ids** are stable: lane slot s → state `2s`, strip `2s+1`. The
+  takeover and the idle or black frame reuse `0` (neither draws lane 0), so
+  16 ids fit an ESP8266's segment limit. Every frame sends all 16, unused ones as
   `{ id, stop: 0 }`, and always `on: true` (WLED drops pixels when one request
   turns it on and sets them).
 - **MQTT** (`worker/src/mqtt.ts`): hand-written MQTT 3.1.1 over WebSocket. Broker
@@ -62,7 +63,7 @@ Claude Code mod (each Mac) ─HTTPS+bearer─▶ Cloudflare Worker + Durable Obj
   `/resume`) mirrored into `$.state` (survives a reload).
 - Nothing leaves a Mac except `{terminal, state | color}`. MQTT payloads carry
   only WLED state. The topic is a secret: never commit or print it.
-- Layout: lanes 2 columns wide at x = 0, 3, 6, 9, 12 (max 5; a 6th is tracked
+- Layout: lanes 1 column wide at x = 0, 2, 4 … 14 (max 8; a 9th is tracked
   with `slot: null`). Rows 0–5 show state, rows 6–7 the color strip.
 
 ## Commands

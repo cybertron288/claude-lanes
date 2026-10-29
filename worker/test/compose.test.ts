@@ -18,43 +18,43 @@ const byId = (all: Seg[], id: number) => all.find((s) => s.id === id)!;
 const idle: RGB[] = Array.from({ length: 128 }, (_, i) => [i, 0, 255 - i]);
 
 describe("compose", () => {
-  test("no slotted lanes with an idle frame: segment 11 is full-panel and carries the pixels as hex", () => {
-    const s = byId(segs({ lanes: [] }, idle), 11);
+  test("no slotted lanes with an idle frame: segment 0 is full-panel and carries the pixels as hex", () => {
+    const s = byId(segs({ lanes: [] }, idle), 0);
     expect(s).toMatchObject({ start: 0, stop: 16, startY: 0, stopY: 8 });
     expect((s.i as string[]).length).toBe(128);
     expect((s.i as string[])[1]).toBe("0100FE");
   });
 
-  test("no lanes and no idle frame: segment 11 is full-panel black, and on stays true", () => {
+  test("no lanes and no idle frame: segment 0 is full-panel black, and on stays true", () => {
     const state = compose({ lanes: [] }, null, 128);
     expect(state.on).toBe(true);
-    expect(byId(state.seg as Seg[], 11)).toMatchObject({ start: 0, stop: 16, startY: 0, stopY: 8, fx: FX.solid.fx, col: [[0, 0, 0]] });
+    expect(byId(state.seg as Seg[], 0)).toMatchObject({ start: 0, stop: 16, startY: 0, stopY: 8, fx: FX.solid.fx, col: [[0, 0, 0]] });
   });
 
-  test("three lanes: each gets a state segment over rows 0–6 and a strip over rows 6–8", () => {
+  test("three lanes: each gets a 1-column state segment over rows 0–6 and a strip over rows 6–8", () => {
     const all = segs({
       lanes: [lane("a", 0, "working", [9, 9, 9]), lane("b", 1, "done"), lane("c", 2, "error")],
     });
-    expect(byId(all, 0)).toMatchObject({ start: 0, stop: 2, startY: 0, stopY: 6, fx: FX.shimmer.fx, m12: 1, col: [WORKING_BLUE] });
-    expect(byId(all, 1)).toMatchObject({ start: 0, stop: 2, startY: 6, stopY: 8, fx: FX.solid.fx, col: [[9, 9, 9]] });
-    expect(byId(all, 2)).toMatchObject({ start: 3, stop: 5, startY: 0, stopY: 6, fx: FX.solid.fx, col: [DONE_GREEN] });
-    expect(byId(all, 4)).toMatchObject({ start: 6, stop: 8, startY: 0, stopY: 6, fx: FX.blink.fx, col: [ERROR_RED] });
-    expect(byId(all, 5)).toMatchObject({ start: 6, stop: 8, startY: 6, stopY: 8 });
+    expect(byId(all, 0)).toMatchObject({ start: 0, stop: 1, startY: 0, stopY: 6, fx: FX.sonar.fx, m12: 1, mY: true, col: [WORKING_BLUE] });
+    expect(byId(all, 1)).toMatchObject({ start: 0, stop: 1, startY: 6, stopY: 8, fx: FX.solid.fx, mY: false, col: [[9, 9, 9]] });
+    expect(byId(all, 2)).toMatchObject({ start: 2, stop: 3, startY: 0, stopY: 6, fx: FX.solid.fx, col: [DONE_GREEN] });
+    expect(byId(all, 4)).toMatchObject({ start: 4, stop: 5, startY: 0, stopY: 6, fx: FX.blink.fx, col: [ERROR_RED] });
+    expect(byId(all, 5)).toMatchObject({ start: 4, stop: 5, startY: 6, stopY: 8 });
     expect(DONE_GREEN).toEqual([20, 90, 40]);
   });
 
-  test("any waiting lane: segment 10 breathes amber over 16×6 and only waiting strips stay", () => {
+  test("any waiting lane: segment 0 breathes amber over 16×6 and only waiting strips stay", () => {
     const all = segs({ lanes: [lane("a", 0, "working"), lane("b", 1, "waiting", [5, 5, 5]), lane("c", 2, "done")] });
-    expect(byId(all, 10)).toMatchObject({ start: 0, stop: 16, startY: 0, stopY: 6, fx: FX.breathe.fx, col: [AMBER] });
+    expect(byId(all, 0)).toMatchObject({ start: 0, stop: 16, startY: 0, stopY: 6, fx: FX.breathe.fx, col: [AMBER] });
     expect(AMBER).toEqual([255, 150, 0]);
-    expect(byId(all, 3)).toMatchObject({ start: 3, stop: 5, startY: 6, stopY: 8, col: [[5, 5, 5]] });
-    for (const id of [0, 1, 2, 4, 5, 11]) expect(byId(all, id)).toEqual({ id, stop: 0 });
+    expect(byId(all, 3)).toMatchObject({ start: 2, stop: 3, startY: 6, stopY: 8, col: [[5, 5, 5]] });
+    for (const id of [1, 2, 4, 5, 15]) expect(byId(all, id)).toEqual({ id, stop: 0 });
   });
 
   test("two waiting lanes give two strips", () => {
-    const all = segs({ lanes: [lane("a", 0, "waiting"), lane("b", 4, "waiting")] });
-    expect(byId(all, 1)).toMatchObject({ start: 0, stop: 2, startY: 6 });
-    expect(byId(all, 9)).toMatchObject({ start: 12, stop: 14, startY: 6 });
+    const all = segs({ lanes: [lane("a", 0, "waiting"), lane("b", 7, "waiting")] });
+    expect(byId(all, 1)).toMatchObject({ start: 0, stop: 1, startY: 6 });
+    expect(byId(all, 15)).toMatchObject({ start: 14, stop: 15, startY: 6 });
   });
 
   test("a lane with slot null never draws a lane or strip", () => {
@@ -63,16 +63,16 @@ describe("compose", () => {
   });
 
   test("a waiting lane with slot null still triggers the takeover, with no strip of its own", () => {
-    const shown = [0, 1, 2, 3, 4].map((s) => lane(`t${s}`, s, "working"));
+    const shown = [0, 1, 2, 3, 4, 5, 6, 7].map((s) => lane(`t${s}`, s, "working"));
     const all = segs({ lanes: [...shown, lane("x", null, "waiting")] });
-    expect(byId(all, 10)).toMatchObject({ start: 0, stop: 16, fx: FX.breathe.fx });
-    expect(all.filter((s) => s.stop !== 0).map((s) => s.id)).toEqual([10]);
+    expect(byId(all, 0)).toMatchObject({ start: 0, stop: 16, fx: FX.breathe.fx });
+    expect(all.filter((s) => s.stop !== 0).map((s) => s.id)).toEqual([0]);
   });
 
-  test("every id 0–11 appears once, in order; undrawn ones are { id, stop: 0 }", () => {
+  test("every id 0–15 appears once, in order; undrawn ones are { id, stop: 0 }", () => {
     const all = segs({ lanes: [lane("a", 3, "done")] });
-    expect(all.map((s) => s.id)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+    expect(all.map((s) => s.id)).toEqual(Array.from({ length: 16 }, (_, id) => id));
     expect(byId(all, 0)).toEqual({ id: 0, stop: 0 });
-    expect(byId(all, 6)).toMatchObject({ start: 9, stop: 11 });
+    expect(byId(all, 6)).toMatchObject({ start: 6, stop: 7 });
   });
 });

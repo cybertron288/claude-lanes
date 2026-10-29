@@ -119,12 +119,13 @@ MacBook 2 mod ─┘                  (Durable Object:      (e.g. broker.hivemq.
 
 Layout "A" with takeover "T1".
 
-- **Lanes:** each session gets 2 columns. Lanes sit at x = 0, 3, 6, 9, 12, with a
-  1-column gap between them. Max 5 sessions. Lanes are assigned first-come, and a
-  lane frees when its session ends.
-- **Bottom 2 rows (y=6,7):** the session's color strip, 2×2.
+- **Lanes:** each session gets 1 column. Lanes sit at x = 0, 2, 4 … 14, with a
+  1-column gap between them. Max 8 sessions (Ravi changed this from 2 columns
+  × 5). Lanes are assigned first-come, and a lane frees when its session ends.
+- **Bottom 2 rows (y=6,7):** the session's color strip, 1×2.
 - **Top 6 rows (y=0–5) of a lane:** session state.
-  - working: blue upward shimmer (a WLED effect that approximates it is fine)
+  - working: blue sonar, pulses leaving the lane center for both ends (Ravi's
+    `sonar_wled.py`; a WLED effect that approximates it is fine)
   - done: dim steady green
   - error: red blink
 - **Approval takeover (T1):** when any session is waiting, all 16×6 top rows pulse
@@ -162,7 +163,7 @@ Several dialogs can be open at once (subagents). Waiting holds while any
 - **Stale sessions:** a session can die without `SessionEnd`. Remote Control
   sessions can also legitimately sit idle for hours. **My call:** free a lane after
   12 h with no events from that session. The builder may tune this.
-- **Overflow:** a 6th concurrent session is tracked but not shown until a lane frees
+- **Overflow:** a 9th concurrent session is tracked but not shown until a lane frees
   (**my call**).
 
 ## Risks to retire first

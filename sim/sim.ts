@@ -8,7 +8,7 @@ import { decodePublish, encodeConnect, encodePingReq, encodeSubscribe } from "..
 
 const W = 16, H = 8;
 const LOOKS: Record<number, string> = {
-  [FX.solid.fx]: "solid", [FX.blink.fx]: "blink", [FX.breathe.fx]: "breathe", [FX.shimmer.fx]: "wave",
+  [FX.solid.fx]: "solid", [FX.blink.fx]: "blink", [FX.breathe.fx]: "breathe", [FX.sonar.fx]: "sonar",
 };
 type RGB = [number, number, number];
 type Seg = {
@@ -25,7 +25,9 @@ function apply(body: any) {
   for (const s of body.seg ?? []) {
     const id = s.id ?? 0;
     if (s.stop === 0) { state.seg.delete(id); continue; }
-    state.seg.set(id, { ...state.seg.get(id), ...s, id });
+    // WLED writes `i` pixels once; an update without them redraws the segment.
+    const { i: _, ...kept } = state.seg.get(id) ?? {};
+    state.seg.set(id, { ...kept, ...s, id });
   }
   state.at = new Date().toLocaleTimeString();
 }
@@ -41,11 +43,19 @@ let st={on:false,bri:128,seg:[]};
 const cells=[...Array(W*H)].map(()=>{const d=document.createElement('div');
   d.style.cssText='width:28px;height:28px;border-radius:50%;background:#1a1a1a';g.appendChild(d);return d});
 const hex=c=>typeof c==='string'?[0,2,4].map(i=>parseInt(c.slice(i,i+2),16)):c;
-function level(fx,t,y){
+// Sonar rings leave the segment's vertical center (ported from sonar_wled.py).
+function sonar(t,y,y0,y1){
+  const PERIOD=0.6,LIFE=0.6,SPEED=6,SHARP=0.9;
+  const dist=Math.abs(y-y0-(y1-y0-1)/2),phase=t%PERIOD;let lv=0;
+  for(let n=0;n<3;n++){const age=phase+n*PERIOD;if(age>LIFE)break;
+    const ring=1-Math.abs(dist-age*SPEED)*SHARP;if(ring>0)lv=Math.max(lv,ring*(1-age/LIFE))}
+  return lv;
+}
+function level(fx,t,y,y0,y1){
   const look=LOOKS[fx];
+  if(look==='sonar')return sonar(t,y,y0,y1);
   if(look==='blink')return Math.sin(t*6)>0?1:0.08;
   if(look==='breathe')return 0.2+0.8*(0.5+0.5*Math.sin(t*3));
-  if(look==='wave')return 0.2+0.8*Math.max(0,Math.sin(t*3+y*0.8));
   return 1;
 }
 function draw(t){
@@ -56,7 +66,7 @@ function draw(t){
     for(let y=y0;y<Math.min(y1,H);y++)for(let x=x0;x<Math.min(x1,W);x++){
       let c;
       if(s.i&&s.i.length){const v=s.i[(y-y0)*(x1-x0)+(x-x0)];if(!v)continue;c=hex(v)}
-      else c=col.map(v=>v*level(s.fx||0,t,y));
+      else c=col.map(v=>v*level(s.fx||0,t,y,y0,Math.min(y1,H)));
       out[y*W+x]=c;
     }
   }

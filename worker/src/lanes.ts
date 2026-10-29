@@ -1,14 +1,15 @@
 import type { ClientEvent, LaneState, RGB } from "../../shared/protocol";
 
-export const MAX_LANES = 5;
+export const MAX_LANES = 8;
 
 export type Lane = { terminal: string; slot: number | null; state: LaneState; color: RGB; lastSeen: number };
 
 // Lanes are kept in arrival order; that order decides who takes a freed slot.
 export type Hub = { lanes: Lane[] };
 
+// Lanes are 1 column wide with a 1-column gap: x = 0, 2, 4 … 14.
 export function slotX(slot: number): number {
-  return slot * 3;
+  return slot * 2;
 }
 
 // Hand free slots to unslotted lanes, oldest arrival first.
