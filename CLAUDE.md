@@ -26,8 +26,9 @@ Claude Code mod (each Mac) ─HTTPS+bearer─▶ Cloudflare Worker + Durable Obj
   "dialog open" and "answered" is in `spike/approval-signal/FINDINGS.md`: read it
   before touching the wiring.
   - Dialog open: `tool.check` with `tool_use_id`, `approver: 'person'` and verdict
-    `ask` (`isDialogAsk`), counted only after a 1 s grace (auto mode answers
-    `ask` and then approves silently).
+    `ask` (`isDialogAsk`), counted only after a 1 s grace and once the
+    `Spinner` has been quiet 800 ms (a classifier answers `ask`, keeps the
+    Spinner drawing, then approves silently; a dialog hides it).
   - Answered: a `ToolGroup`/`ToolUse` render with `isRunning: true` for that id,
     or the `tool.call` result at the latest. Subagent calls never render.
   - `turn.*` events with `agentId` are subagent loops; ignore them for base state.

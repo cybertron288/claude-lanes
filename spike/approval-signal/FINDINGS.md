@@ -115,3 +115,23 @@ On this machine a plugin named `cc-plugin-sec-default` runs first on every
 `classic.PermissionRequest`, `classic.Notification` and `classic.PostToolUse`
 hooks were all skipped ("sent the event on past it"). The mod must use only
 engine events (`tool.*`, `turn.*`, `session.*`, `ui.render`), never `classic.*`.
+
+## 10. A slow classifier vs a dialog: the Spinner tells them apart
+
+Found live: a session whose asks go to a server-side classifier (its
+transcript carries `serverClassifierRequest`, though its footer says bypass)
+showed amber for 2–10 s with no dialog. Its classifier can take longer than
+the 1 s grace.
+
+Probes, same logger, Spinner gaps over 400 ms listed:
+
+| Mode | `tool.check` | `ask` → `isRunning` | Longest Spinner gap during the ask |
+|---|---|---|---|
+| `bypassPermissions` (Bash, Write, two MCP tools) | `allow` | n/a | none |
+| `auto` (Bash ×2, an MCP tool) | `ask` | 403 ms, 451 ms, 981 ms | 569 ms |
+| `default`, dialog up 16.6 s, then approved | `ask` | 16.6 s | 16,651 ms |
+
+The Spinner stopped 21 ms before `tool.check` answered `ask` and came back on
+approval. So an ask counts as waiting once it is past the grace *and* no
+Spinner has drawn for 800 ms. A surface that never draws a Spinner falls back
+to the grace alone.

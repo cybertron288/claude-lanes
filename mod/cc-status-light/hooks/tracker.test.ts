@@ -42,8 +42,9 @@ function manualTimers() {
 function setup() {
   const seen: LaneState[] = []
   const timers = manualTimers()
-  const tracker = createTracker(s => seen.push(s), timers.schedule)
-  return { seen, tracker, fireAll: timers.fireAll }
+  let t = 0
+  const tracker = createTracker(s => seen.push(s), timers.schedule, undefined, () => t)
+  return { seen, tracker, fireAll: timers.fireAll, at: (ms: number) => (t = ms) }
 }
 
 describe('tracker', () => {
@@ -66,6 +67,35 @@ describe('tracker', () => {
     fireAll()
     tracker.approved('a')
     expect(seen).toEqual(['working', 'waiting', 'working'])
+  })
+
+  test('past the grace, an ask waits while the Spinner draws (a slow classifier) and is settled', async () => {
+    const { seen, tracker, fireAll, at } = setup()
+    tracker.turnStart()
+    tracker.askStart('a')
+    at(900)
+    tracker.spinner()
+    at(1000)
+    fireAll()
+    expect(seen).toEqual(['working'])
+    tracker.approved('a')
+    fireAll()
+    expect(seen).toEqual(['working'])
+  })
+
+  test('an ask turns waiting once the Spinner has been quiet 800 ms (a dialog hides it)', async () => {
+    const { seen, tracker, fireAll, at } = setup()
+    tracker.turnStart()
+    tracker.spinner()
+    at(500)
+    tracker.spinner()
+    tracker.askStart('a')
+    at(1000)
+    fireAll()
+    expect(seen).toEqual(['working'])
+    at(1300)
+    fireAll()
+    expect(seen).toEqual(['working', 'waiting'])
   })
 
   test('an ask settled inside the grace never shows waiting (auto mode)', async () => {

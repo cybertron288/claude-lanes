@@ -55,6 +55,7 @@ export const register: Register = on => {
     log($, {
       ev: 'tool.check', tool: e.tool, id: e.tool_use_id, agentId: e.agentId,
       approver: e.approver, decision: r.decision, reason: r.reason, hook: r.hook,
+      rule: r.rule, setting: r.setting, plugin: (r as any).plugin, isReadOnly: e.isReadOnly,
     })
     return r
   })

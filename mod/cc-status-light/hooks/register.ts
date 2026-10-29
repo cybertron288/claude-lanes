@@ -139,6 +139,12 @@ export const register: Register = (on, options) => {
     return next(e)
   })
 
+  // A dialog hides the Spinner; a classifier deciding an ask does not (FINDINGS.md §10).
+  on('ui.render', { component: 'Spinner' }, async ($, e, next) => {
+    tracker?.spinner()
+    return next(e)
+  })
+
   on('session.end', async ($, e, next) => {
     if (!reporter || !terminal || e.reason === 'clear' || e.reason === 'resume') return next(e)
     reporter.report({ kind: 'end', terminal })

@@ -8,6 +8,12 @@ export type Schedule = (ms: number, fn: () => void) => () => void
 // (spike/approval-signal/FINDINGS.md §2).
 export const ASK_GRACE_MS = 1000
 
+// The Spinner redraws every ~100 ms while a turn runs, and a dialog hides it
+// (FINDINGS.md §10). A classifier settling an ask keeps it drawing, so past the
+// grace an ask waits for the Spinner to have been quiet this long.
+export const SPINNER_QUIET_MS = 800
+const RECHECK_MS = 250
+
 // Modes that settle an ask with no dialog, and the tools acceptEdits settles.
 const SILENT_MODES = new Set(['auto', 'bypassPermissions', 'dontAsk'])
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit'])
@@ -36,13 +42,22 @@ export type Tracker = {
   askStart(id: string): void
   askEnd(id: string): void
   approved(id: string): void
+  spinner(): void
 }
 
-// The terminal's lane state: `waiting` while any ask is open past the grace,
-// otherwise the base state the main loop's turns set. Reports only changes.
-export function createTracker(onState: (s: LaneState) => void, schedule: Schedule, graceMs = ASK_GRACE_MS): Tracker {
+// The terminal's lane state: `waiting` while any ask is open past the grace
+// with the Spinner quiet, otherwise the base state the main loop's turns set.
+// Reports only changes.
+export function createTracker(
+  onState: (s: LaneState) => void,
+  schedule: Schedule,
+  graceMs = ASK_GRACE_MS,
+  now: () => number = Date.now,
+): Tracker {
   let base: LaneState | null = null
   let shown: LaneState | null = null
+  // Null until the surface draws a Spinner; then the grace alone decides.
+  let spunAt: number | null = null
   const asks = new Map<string, { isConfirmed: boolean; cancel: () => void }>()
 
   const emit = () => {
@@ -71,12 +86,20 @@ export function createTracker(onState: (s: LaneState) => void, schedule: Schedul
       if (asks.has(id)) return
       const ask = { isConfirmed: false, cancel: () => {} }
       asks.set(id, ask)
-      ask.cancel = schedule(graceMs, () => {
+      const confirm = () => {
+        if (spunAt !== null && now() - spunAt < SPINNER_QUIET_MS) {
+          ask.cancel = schedule(RECHECK_MS, confirm)
+          return
+        }
         ask.isConfirmed = true
         emit()
-      })
+      }
+      ask.cancel = schedule(graceMs, confirm)
     },
     askEnd: end,
     approved: end,
+    spinner: () => {
+      spunAt = now()
+    },
   }
 }
