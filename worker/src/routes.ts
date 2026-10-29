@@ -36,8 +36,8 @@ export async function handleRequest(req: Request, env: Env): Promise<Response> {
       return new Response("body is not JSON", { status: 400 });
     }
     if (!isClientEvent(body)) return new Response("not a ClientEvent", { status: 400 });
-    await hub(env).fetch("https://hub/event", { method: "POST", body: JSON.stringify(body) });
-    return new Response(null, { status: 204 });
+    const res = await hub(env).fetch("https://hub/event", { method: "POST", body: JSON.stringify(body) });
+    return new Response(null, { status: res.status === 204 ? 204 : 503 });
   }
 
   if (path === "/state" && req.method === "GET") return hub(env).fetch("https://hub/state");

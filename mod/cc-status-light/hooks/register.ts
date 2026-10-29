@@ -16,6 +16,8 @@ const COMMAND = {
 let terminal: string | null = null
 let tracker: Tracker | null = null
 let reporter: Reporter | null = null
+// The session's permission mode as the latest subagent spawn reported it.
+let mode: string | undefined
 
 function timers($: EngineInterface): Schedule {
   return (ms, fn) => {
@@ -69,14 +71,24 @@ export const register: Register = (on, options) => {
   const isConfigured = workerUrl !== '' && token !== ''
 
   on('session.start', async ($, e, next) => {
-    await $.command.register(COMMAND)
-    if (!isConfigured || e.isInteractive !== true) return next(e)
-    const { key, isReload } = await claimTerminal($)
-    reporter ??= createReporter(sender($, workerUrl, token), timers($))
-    tracker ??= createTracker(state => reporter!.report({ kind: 'state', terminal: key, state }), timers($))
-    if (!isReload) tracker.sessionStart()
+    if (isConfigured && e.isInteractive === true) {
+      const { key, isReload } = await claimTerminal($)
+      reporter ??= createReporter(sender($, workerUrl, token), timers($))
+      tracker ??= createTracker(state => reporter!.report({ kind: 'state', terminal: key, state }), timers($))
+      if (!isReload) tracker.sessionStart()
+    }
+    // After the tracker: a refused registration (a reload's duplicate) costs
+    // only the command, never the lane.
+    try {
+      await $.command.register(COMMAND)
+    } catch {}
     return next(e)
   })
+
+  on('agent.spawn', async ($, e, next) => {
+    mode = e.permissionMode ?? mode
+    return next(e)
+  }).catch(($, e, next) => next(e))
 
   on('command.run', { command: 'led-color' }, async ($, e) => ({
     text: isConfigured
@@ -87,7 +99,7 @@ export const register: Register = (on, options) => {
   on('turn.start', async ($, e, next) => {
     if (tracker && !e.agentId) {
       tracker.turnStart()
-      void keepTerminal($)
+      void keepTerminal($).catch(() => {})
     }
     return next(e)
   })
@@ -99,7 +111,7 @@ export const register: Register = (on, options) => {
 
   on('tool.check', async ($, e, next) => {
     const verdict = await next(e)
-    if (tracker && isDialogAsk(e, verdict)) tracker.askStart(e.tool_use_id!)
+    if (tracker && isDialogAsk(e, verdict, mode)) tracker.askStart(e.tool_use_id!)
     return verdict
   }).catch(($, e, next) => next(e))
 

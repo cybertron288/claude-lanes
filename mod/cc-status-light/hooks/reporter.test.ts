@@ -97,7 +97,7 @@ describe('reporter', () => {
       return Promise.resolve()
     }, clock.schedule)
     r.report(state('working'))
-    await clock.advance(250 + 3000)
+    await clock.advance(250 + 6000)
     hang = false
     r.report({ kind: 'end', terminal: 't' })
     await clock.advance(250)
@@ -114,6 +114,29 @@ describe('reporter', () => {
     r.report({ kind: 'end', terminal: 't' })
     await clock.advance(250)
     expect(sent.map(e => e.kind)).toEqual(['state', 'color', 'state', 'end'])
+  })
+
+  test('a report during a send, then a drain that ends before the debounce, never wedges later reports', async () => {
+    const sent: ClientEvent[] = []
+    const clock = fakeClock()
+    const r = createReporter(ev => new Promise<void>(done => void clock.schedule(100, () => (sent.push(ev), done()))), clock.schedule)
+    r.report(state('working'))
+    await clock.advance(300) // working is in flight until 350
+    r.report(state('waiting')) // arms the debounce for 550; the drain sends it by 450
+    await clock.advance(300) // the debounce fires on an empty queue at 550
+    r.report(state('done'))
+    await clock.advance(1000)
+    expect(sent).toEqual([state('working'), state('waiting'), state('done')])
+  })
+
+  test('flush() on an empty queue resolves and leaves the reporter working', async () => {
+    const sent: ClientEvent[] = []
+    const clock = fakeClock()
+    const r = createReporter(async ev => void sent.push(ev), clock.schedule)
+    await r.flush()
+    r.report({ kind: 'end', terminal: 't' })
+    await r.flush()
+    expect(sent).toEqual([{ kind: 'end', terminal: 't' }])
   })
 
   test('flush() sends now and resolves after the send', async () => {

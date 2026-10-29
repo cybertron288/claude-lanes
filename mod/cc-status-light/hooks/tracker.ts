@@ -8,10 +8,25 @@ export type Schedule = (ms: number, fn: () => void) => () => void
 // (spike/approval-signal/FINDINGS.md §2).
 export const ASK_GRACE_MS = 1000
 
+// Modes that settle an ask with no dialog, and the tools acceptEdits settles.
+const SILENT_MODES = new Set(['auto', 'bypassPermissions', 'dontAsk'])
+const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit'])
+
 // A real call whose verdict puts it to a person: the case where the
 // permission dialog, a question or a plan approval opens (FINDINGS.md §2).
-export function isDialogAsk(e: { tool_use_id?: string; approver?: string }, verdict: { decision: string }): boolean {
-  return Boolean(e.tool_use_id) && e.approver === 'person' && verdict.decision === 'ask'
+// tool.check answers before the mode settles the ask. The main loop's false
+// asks clear when the call is drawn running, but a subagent's calls are never
+// drawn, so its asks are dropped when the session's mode (`mode`, as the
+// latest agent.spawn reported it) settles them silently.
+export function isDialogAsk(
+  e: { tool_use_id?: string; approver?: string; agentId?: string; tool?: string },
+  verdict: { decision: string },
+  mode?: string,
+): boolean {
+  if (!e.tool_use_id || e.approver !== 'person' || verdict.decision !== 'ask') return false
+  if (!e.agentId || mode === undefined) return true
+  if (SILENT_MODES.has(mode)) return false
+  return !(mode === 'acceptEdits' && EDIT_TOOLS.has(e.tool ?? ''))
 }
 
 export type Tracker = {

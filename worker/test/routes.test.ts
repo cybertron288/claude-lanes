@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { handleRequest, type Env } from "../src/routes";
 
-function fakeEnv(token: string | undefined = "s3cret") {
+function fakeEnv(token: string | undefined = "s3cret", hubStatus = 204) {
   const calls: { path: string; body: string }[] = [];
   const stub = {
     fetch: async (url: string, init?: RequestInit) => {
       calls.push({ path: new URL(url).pathname, body: String(init?.body ?? "") });
-      return new Response(null, { status: 204 });
+      return new Response(null, { status: hubStatus });
     },
   };
   const env = {
@@ -56,6 +56,11 @@ describe("handleRequest", () => {
     const { env, calls } = fakeEnv();
     expect((await handleRequest(post(valid, "Bearer s3cret"), env)).status).toBe(204);
     expect(calls).toEqual([{ path: "/event", body: valid }]);
+  });
+
+  test("a valid event the hub could not publish → 503, so the mod retries", async () => {
+    const { env } = fakeEnv("s3cret", 503);
+    expect((await handleRequest(post(valid, "Bearer s3cret"), env)).status).toBe(503);
   });
 
   test("GET /state with the token is forwarded to the hub", async () => {

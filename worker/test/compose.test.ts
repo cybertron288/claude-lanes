@@ -57,10 +57,16 @@ describe("compose", () => {
     expect(byId(all, 9)).toMatchObject({ start: 12, stop: 14, startY: 6 });
   });
 
-  test("a lane with slot null never renders", () => {
-    const all = segs({ lanes: [lane("a", 0, "done"), lane("x", null, "waiting")] });
-    expect(byId(all, 10)).toEqual({ id: 10, stop: 0 });
+  test("a lane with slot null never draws a lane or strip", () => {
+    const all = segs({ lanes: [lane("a", 0, "done"), lane("x", null, "error")] });
     expect(all.filter((s) => s.stop !== 0).map((s) => s.id)).toEqual([0, 1]);
+  });
+
+  test("a waiting lane with slot null still triggers the takeover, with no strip of its own", () => {
+    const shown = [0, 1, 2, 3, 4].map((s) => lane(`t${s}`, s, "working"));
+    const all = segs({ lanes: [...shown, lane("x", null, "waiting")] });
+    expect(byId(all, 10)).toMatchObject({ start: 0, stop: 16, fx: FX.breathe.fx });
+    expect(all.filter((s) => s.stop !== 0).map((s) => s.id)).toEqual([10]);
   });
 
   test("every id 0–11 appears once, in order; undrawn ones are { id, stop: 0 }", () => {

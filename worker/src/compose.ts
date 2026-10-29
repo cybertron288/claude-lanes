@@ -37,7 +37,8 @@ export function compose(hub: Hub, idle: RGB[] | null, bri: number): WledState {
   if (slotted.length === 0) {
     const { col, ...full } = segment(IDLE_ID, [0, 16], [0, 8], FX.solid, [0, 0, 0]);
     drawn.set(IDLE_ID, idle ? { ...full, i: idle.map(hex) } : { ...full, col });
-  } else if (slotted.some((l) => l.state === "waiting")) {
+  } else if (hub.lanes.some((l) => l.state === "waiting")) {
+    // Any session, shown or not: a 6th terminal waiting still needs you.
     drawn.set(TAKEOVER_ID, segment(TAKEOVER_ID, [0, 16], [0, 6], FX.breathe, AMBER));
     for (const l of slotted) if (l.state === "waiting") strip(l.slot, l.color);
   } else {

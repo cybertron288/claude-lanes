@@ -14,7 +14,8 @@ export type ReporterOptions = { debounceMs?: number; timeoutMs?: number; retryMs
 export function createReporter(
   send: (ev: ClientEvent) => Promise<unknown>,
   schedule: Schedule,
-  { debounceMs = 250, timeoutMs = 3000, retryMs = 5000 }: ReporterOptions = {},
+  // timeoutMs outlasts the Worker's own 5 s MQTT publish timeout.
+  { debounceMs = 250, timeoutMs = 6000, retryMs = 5000 }: ReporterOptions = {},
 ): Reporter {
   const queue: ClientEvent[] = []
   let timer: { cancel: () => void; isRetry: boolean } | null = null
@@ -43,19 +44,24 @@ export function createReporter(
   // One drain at a time; a flush during a drain waits for it, and the drain
   // picks up whatever was queued meanwhile.
   let draining: Promise<void> | null = null
-  function flush(): Promise<void> {
-    draining ??= (async () => {
-      try {
-        while (queue.length > 0) {
-          await bounded(queue[0]!)
-          queue.shift()
-        }
-      } catch {
-        arm(retryMs, true)
-      } finally {
-        draining = null
+  async function drain(): Promise<void> {
+    try {
+      while (queue.length > 0) {
+        await bounded(queue[0]!)
+        queue.shift()
       }
-    })()
+    } catch {
+      arm(retryMs, true)
+    } finally {
+      draining = null
+    }
+  }
+  function flush(): Promise<void> {
+    if (draining) return draining
+    // An empty queue must not start a drain: it would finish before `draining`
+    // is assigned and leave a settled promise there for good.
+    if (queue.length === 0) return Promise.resolve()
+    draining = drain()
     return draining
   }
 

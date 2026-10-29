@@ -13,6 +13,18 @@ describe('isDialogAsk', () => {
     expect(isDialogAsk({ tool_use_id: 'u1', approver: 'person' }, { decision: 'allow' })).toBe(false)
     expect(isDialogAsk({ tool_use_id: 'u1', approver: 'person' }, { decision: 'deny' })).toBe(false)
   })
+  test("a subagent's ask in a mode that settles it silently does not", async () => {
+    const sub = { tool_use_id: 'u1', approver: 'person', agentId: 'a1', tool: 'Bash' }
+    for (const mode of ['auto', 'bypassPermissions', 'dontAsk']) expect(isDialogAsk(sub, { decision: 'ask' }, mode)).toBe(false)
+    expect(isDialogAsk({ ...sub, tool: 'Edit' }, { decision: 'ask' }, 'acceptEdits')).toBe(false)
+  })
+  test("a subagent's ask in default, plan or acceptEdits (non-edit) mode, or an unknown mode, does", async () => {
+    const sub = { tool_use_id: 'u1', approver: 'person', agentId: 'a1', tool: 'Bash' }
+    for (const mode of ['default', 'plan', 'acceptEdits', undefined]) expect(isDialogAsk(sub, { decision: 'ask' }, mode)).toBe(true)
+  })
+  test("the main loop's ask counts in every mode (its false asks clear on the running render)", async () => {
+    expect(isDialogAsk({ tool_use_id: 'u1', approver: 'person', tool: 'Bash' }, { decision: 'ask' }, 'auto')).toBe(true)
+  })
 })
 
 // A schedule that fires only when the test says so.

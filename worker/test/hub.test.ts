@@ -83,11 +83,37 @@ describe("StatusHubCore", () => {
   test("a failing publisher never throws out of event(), and the next alarm() publishes", async () => {
     const { core, sent, setFail } = setup();
     setFail(true);
-    await core.event({ kind: "state", terminal: "a", state: "waiting" });
+    expect(await core.event({ kind: "state", terminal: "a", state: "waiting" })).toBe(false);
     expect(sent).toHaveLength(0);
     setFail(false);
     await core.alarm();
     expect(JSON.parse(sent[0]!).seg[10]).toMatchObject({ id: 10, fx: 2 });
+  });
+
+  test("event() resolves true once published, and true again for a no-op repeat", async () => {
+    const { core } = setup();
+    expect(await core.event({ kind: "state", terminal: "a", state: "done" })).toBe(true);
+    expect(await core.event({ kind: "state", terminal: "a", state: "done" })).toBe(true);
+  });
+
+  test("one storage error fails only its own event; the next one lands", async () => {
+    const store = memoryStore();
+    let failPut = true;
+    const flaky: Store = {
+      get: store.get,
+      put: async (k, v) => {
+        if (failPut) {
+          failPut = false;
+          throw new Error("storage hiccup");
+        }
+        return store.put(k, v);
+      },
+    };
+    const sent: string[] = [];
+    const core = new StatusHubCore(flaky, async (p) => void sent.push(p), () => 0, 128);
+    await expect(core.event({ kind: "state", terminal: "a", state: "working" })).rejects.toThrow("storage hiccup");
+    expect(await core.event({ kind: "state", terminal: "b", state: "done" })).toBe(true);
+    expect((await core.snapshot()).hub.lanes.map((l) => l.terminal)).toEqual(["b"]);
   });
 
   test("concurrent events from two terminals both land", async () => {

@@ -44,8 +44,9 @@ export class StatusHub extends DurableObject<HubEnv> {
     const path = new URL(req.url).pathname;
     await this.armAlarm();
     if (path === "/event") {
-      await this.core.event((await req.json()) as ClientEvent);
-      return new Response(null, { status: 204 });
+      // 503 when the broker did not take the frame, so the mod retries.
+      const isShown = await this.core.event((await req.json()) as ClientEvent);
+      return new Response(null, { status: isShown ? 204 : 503 });
     }
     if (path === "/refresh") {
       await this.refresh();

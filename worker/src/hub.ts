@@ -14,7 +14,7 @@ export const REPUBLISH_MS = 15 * 60_000;
 export class StatusHubCore {
   // Publishes run one at a time, each composed from the latest stored state,
   // so a slow publish can never land after a newer one.
-  private queue: Promise<void> = Promise.resolve();
+  private queue: Promise<unknown> = Promise.resolve();
 
   constructor(
     private store: Store,
@@ -32,31 +32,41 @@ export class StatusHubCore {
     return (await this.store.get<RGB[]>("idle")) ?? null;
   }
 
-  private flush(force: boolean): Promise<void> {
-    this.queue = this.queue.then(async () => {
+  // Resolves true when the panel now shows the latest state (published, or
+  // already current), false when the publish failed.
+  private flush(force: boolean): Promise<boolean> {
+    return this.serial("queue", async () => {
       const payload = JSON.stringify(compose(await this.hub(), await this.idle(), this.bri));
-      if (!force && payload === (await this.store.get<string>("last"))) return;
+      if (!force && payload === (await this.store.get<string>("last"))) return true;
       try {
         await this.publisher(payload);
-        await this.store.put("last", payload);
       } catch {
-        // The next alarm republishes.
+        return false; // the caller's retry or the next alarm republishes
       }
+      await this.store.put("last", payload);
+      return true;
     });
-    return this.queue;
   }
 
   // Read-modify-write of the hub, one at a time, so concurrent events never
   // overwrite each other.
-  private writes: Promise<void> = Promise.resolve();
+  private writes: Promise<unknown> = Promise.resolve();
   private mutate(fn: (hub: Hub) => Hub): Promise<void> {
-    this.writes = this.writes.then(async () => this.store.put("hub", fn(await this.hub())));
-    return this.writes;
+    return this.serial("writes", async () => this.store.put("hub", fn(await this.hub())));
   }
 
-  async event(ev: ClientEvent): Promise<void> {
+  // Runs `step` after the chain's previous step. A step that fails rejects its
+  // own caller only; the chain goes on for the next one.
+  private serial<T>(chain: "queue" | "writes", step: () => Promise<T>): Promise<T> {
+    const run = this[chain].then(step);
+    this[chain] = run.catch(() => {});
+    return run;
+  }
+
+  // Resolves false when the change is stored but the panel did not get it.
+  async event(ev: ClientEvent): Promise<boolean> {
     await this.mutate((hub) => apply(hub, ev, this.clock(), (inUse) => pickDistinctColor(inUse, this.rand)));
-    await this.flush(false);
+    return this.flush(false);
   }
 
   async alarm(): Promise<void> {

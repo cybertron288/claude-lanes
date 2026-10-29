@@ -6,13 +6,16 @@ const INTERACTIVE = { cwd: '/', surface: 'terminal', isInteractive: true } as co
 
 // The engine beneath the mod: a session, a command registry, an HTTP client
 // that records what the mod sends, and a clock the test moves.
-function world(on: On, opts: { hangFetch?: boolean } = {}) {
+function world(on: On, opts: { hangFetch?: boolean; refuseCommand?: boolean } = {}) {
   const sent: any[] = []
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   on('session.end', (_, e) => ({ sessionId: e.sessionId }))
   on('turn.start', (_, e) => ({ turnId: e.turnId }))
   on('turn.complete', () => ({ text: '' }))
-  on('command.register', () => ({ value: { command: 'led-color' } }))
+  on('command.register', () => {
+    if (opts.refuseCommand) throw new Error('led-color is already registered')
+    return { value: { command: 'led-color' } }
+  })
   on('http.fetch', (_, e) => {
     if (opts.hangFetch) return new Promise(() => {})
     sent.push(JSON.parse(e.init?.body ?? '{}'))
@@ -42,6 +45,13 @@ describe('cc-status-light wiring', () => {
   // The kit plays no person (an ask runs as a background subagent's would), so
   // dialogs are covered by isDialogAsk and the tracker tests, and live in the
   // spike's scenarios. What the kit can show: an ask nobody can answer is no dialog.
+  test('a refused command registration (a reload duplicate) still reports the lane', CONFIG, async ($, on) => {
+    const w = world(on, { refuseCommand: true })
+    await $.session.start(INTERACTIVE)
+    await w.clock.advance(300)
+    expect(w.states()).toEqual(['done'])
+  })
+
   test('an ask with no person to answer it never reports waiting', CONFIG, async ($, on) => {
     const w = world(on)
     askVerdict(on)
