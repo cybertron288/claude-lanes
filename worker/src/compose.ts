@@ -1,6 +1,6 @@
 import type { LaneState, RGB } from "../../shared/protocol";
 import { FX, type Effect } from "./effects";
-import { MAX_LANES, slotX, type Hub } from "./lanes";
+import { DONE_PULSE_MS, MAX_LANES, slotX, type Hub, type Lane } from "./lanes";
 
 export const WORKING_BLUE: RGB = [40, 110, 255];
 export const DONE_GREEN: RGB = [20, 90, 40];
@@ -24,13 +24,19 @@ const LOOK: Record<Exclude<LaneState, "waiting">, { effect: Effect; color: RGB }
   error: { effect: FX.blink, color: ERROR_RED },
 };
 
+// A task that just finished breathes green, then holds steady.
+function look(lane: Lane, now: number): { effect: Effect; color: RGB } {
+  const isFresh = lane.state === "done" && lane.doneAt !== undefined && now < lane.doneAt + DONE_PULSE_MS;
+  return isFresh ? { effect: FX.breathe, color: DONE_GREEN } : LOOK[lane.state as Exclude<LaneState, "waiting">];
+}
+
 function segment(id: number, x: [number, number], y: [number, number], effect: Effect, color: RGB) {
   return { id, start: x[0], stop: x[1], startY: y[0], stopY: y[1], fx: effect.fx, sx: effect.sx, ix: effect.ix, m12: effect.m12 ?? 0, mY: effect.mY ?? false, col: [color] };
 }
 
 const hex = (c: RGB) => c.map((v) => v.toString(16).padStart(2, "0")).join("").toUpperCase();
 
-export function compose(hub: Hub, idle: RGB[] | null, bri: number): WledState {
+export function compose(hub: Hub, idle: RGB[] | null, bri: number, now: number): WledState {
   const drawn = new Map<number, object>();
   const slotted = hub.lanes.filter((l): l is typeof l & { slot: number } => l.slot !== null);
   const columns = (slot: number): [number, number] => [slotX(slot), slotX(slot) + LANE_WIDTH];
@@ -46,8 +52,8 @@ export function compose(hub: Hub, idle: RGB[] | null, bri: number): WledState {
     for (const l of slotted) if (l.state === "waiting") strip(l.slot, l.color);
   } else {
     for (const l of slotted) {
-      const look = LOOK[l.state as Exclude<LaneState, "waiting">];
-      drawn.set(2 * l.slot, segment(2 * l.slot, columns(l.slot), [0, 6], look.effect, look.color));
+      const { effect, color } = look(l, now);
+      drawn.set(2 * l.slot, segment(2 * l.slot, columns(l.slot), [0, 6], effect, color));
       strip(l.slot, l.color);
     }
   }

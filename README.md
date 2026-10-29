@@ -8,7 +8,7 @@ its state, and the bottom 2 rows are its color strip:
 | State | Look |
 |---|---|
 | working | blue sonar: pulses leave the lane center up and down |
-| done | dim steady green |
+| done | green pulse for 20 s after a task finishes, then dim steady green |
 | error | red blink (an API error ended the turn; failed tool calls do not count) |
 
 When any session waits for you (a permission dialog, a question, a plan to

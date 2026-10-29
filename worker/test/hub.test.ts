@@ -63,6 +63,19 @@ describe("StatusHubCore", () => {
     expect(JSON.parse(sent[2]!).seg[0]).toMatchObject({ id: 0, stop: 16, col: [[0, 0, 0]] });
   });
 
+  test("a finished task pulses, wakeAt names the pulse end, and alarm() then publishes it steady", async () => {
+    const { core, sent, tick } = setup();
+    await core.event({ kind: "state", terminal: "a", state: "working" });
+    tick(5000);
+    await core.event({ kind: "state", terminal: "a", state: "done" });
+    expect(JSON.parse(sent.at(-1)!).seg[0]).toMatchObject({ id: 0, fx: 2 });
+    expect(await core.wakeAt()).toBe(6000 + 20_000);
+    tick(20_000);
+    await core.alarm();
+    expect(JSON.parse(sent.at(-1)!).seg[0]).toMatchObject({ id: 0, fx: 0 });
+    expect(await core.wakeAt()).toBeNull();
+  });
+
   test("refreshIdle with a failing fetch keeps the previous idle frame and publishes nothing", async () => {
     const { core, sent } = setup();
     await core.refreshIdle(async () => grid);

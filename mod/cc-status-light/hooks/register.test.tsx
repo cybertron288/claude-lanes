@@ -111,12 +111,18 @@ describe('cc-status-light wiring', () => {
     expect(w.sent).toEqual([])
   })
 
-  test("a subagent's turns leave the lane where the main loop put it", CONFIG, async ($, on) => {
+  test('a background subagent still running after the main turn keeps the lane working until it ends', CONFIG, async ($, on) => {
     const w = world(on)
     await $.session.start(INTERACTIVE)
-    await $.turn.start({ text: '', turnId: 'sub', agentId: 'a1' })
     await w.clock.advance(300)
-    expect(w.states()).toEqual(['done'])
+    await $.turn.start({ text: 'go', turnId: 't1' })
+    await $.turn.start({ text: '', turnId: 'sub', agentId: 'a1' })
+    await $.turn.complete({ turnId: 't1', reason: 'answer' } as any)
+    await w.clock.advance(300)
+    expect(w.states()).toEqual(['done', 'working'])
+    await $.turn.complete({ turnId: 'sub', agentId: 'a1', reason: 'answer' } as any)
+    await w.clock.advance(300)
+    expect(w.states()).toEqual(['done', 'working', 'done'])
   })
 
   test('/led-color pink sends a color; /led-color nope answers the error and sends nothing', CONFIG, async ($, on) => {

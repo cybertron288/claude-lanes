@@ -1,6 +1,6 @@
 {
   "name": "cc-status-light",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Shows this session's state on a WLED LED matrix: working, done, error, and an amber pulse while it waits for you.",
   "types": "./types/index.d.ts",
   "userConfig": {

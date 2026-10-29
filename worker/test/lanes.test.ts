@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { RGB } from "../../shared/protocol";
-import { apply, expire, slotX, type Hub } from "../src/lanes";
+import { apply, expire, pulseEnd, slotX, type Hub } from "../src/lanes";
 
 const PICKED: RGB = [1, 2, 3];
 const pick = () => PICKED;
@@ -60,6 +60,35 @@ describe("apply", () => {
     let hub = apply(withTerminals(2), { kind: "color", terminal: "t1", color: [7, 7, 7] }, 9, pick);
     hub = apply(hub, { kind: "state", terminal: "t1", state: "waiting" }, 20, () => [0, 0, 0]);
     expect(hub.lanes[1]).toEqual({ terminal: "t1", slot: 1, state: "waiting", color: [7, 7, 7], lastSeen: 20 });
+  });
+});
+
+describe("doneAt", () => {
+  const state = (hub: Hub, s: "working" | "done" | "error", now: number) => apply(hub, { kind: "state", terminal: "t0", state: s }, now, pick);
+
+  test("a new lane that starts done has none", () => {
+    expect(state(empty, "done", 5).lanes[0]!.doneAt).toBeUndefined();
+  });
+
+  test("turning done from another state stamps it, a repeated done keeps it, leaving done drops it", () => {
+    let hub = state(state(empty, "working", 0), "done", 10);
+    expect(hub.lanes[0]!.doneAt).toBe(10);
+    hub = state(hub, "done", 30);
+    expect(hub.lanes[0]!.doneAt).toBe(10);
+    hub = state(hub, "working", 40);
+    expect(hub.lanes[0]).not.toHaveProperty("doneAt");
+  });
+
+  test("pulseEnd is the earliest running pulse's end, or null once all have ended", () => {
+    const hub: Hub = {
+      lanes: [
+        { terminal: "a", slot: 0, state: "done", color: PICKED, lastSeen: 0, doneAt: 5000 },
+        { terminal: "b", slot: 1, state: "done", color: PICKED, lastSeen: 0, doneAt: 1000 },
+      ],
+    };
+    expect(pulseEnd(hub, 2000)).toBe(21_000);
+    expect(pulseEnd(hub, 21_000)).toBe(25_000);
+    expect(pulseEnd(hub, 25_000)).toBeNull();
   });
 });
 

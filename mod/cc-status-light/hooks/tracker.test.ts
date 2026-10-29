@@ -98,6 +98,28 @@ describe('tracker', () => {
     expect(seen).toEqual(['working', 'waiting'])
   })
 
+  test('a done main loop shows working while a background subagent runs, then done when it ends', async () => {
+    const { seen, tracker } = setup()
+    tracker.turnStart()
+    tracker.subagentTurnStart('s1')
+    tracker.subagentTurnStart('s2')
+    tracker.turnComplete('answer')
+    expect(seen).toEqual(['working'])
+    tracker.subagentTurnEnd('s1')
+    expect(seen).toEqual(['working'])
+    tracker.subagentTurnEnd('s2')
+    expect(seen).toEqual(['working', 'done'])
+  })
+
+  test('a subagent turn never masks an error, and an unknown turn end changes nothing', async () => {
+    const { seen, tracker } = setup()
+    tracker.turnStart()
+    tracker.subagentTurnStart('s1')
+    tracker.turnComplete('error')
+    tracker.subagentTurnEnd('zz')
+    expect(seen).toEqual(['working', 'error'])
+  })
+
   test('an ask settled inside the grace never shows waiting (auto mode)', async () => {
     const { seen, tracker, fireAll } = setup()
     tracker.turnStart()

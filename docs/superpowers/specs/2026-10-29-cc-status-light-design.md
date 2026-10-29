@@ -126,7 +126,8 @@ Layout "A" with takeover "T1".
 - **Top 6 rows (y=0–5) of a lane:** session state.
   - working: blue sonar, pulses leaving the lane center for both ends (Ravi's
     `sonar_wled.py`; a WLED effect that approximates it is fine)
-  - done: dim steady green
+  - done: green pulse (breathe) for 20 s when a task finishes, then dim steady
+    green (Ravi). A session that starts shows steady green at once.
   - error: red blink
 - **Approval takeover (T1):** when any session is waiting, all 16×6 top rows pulse
   amber (breathe). Only the waiting session(s)' strips stay lit; other strips go
@@ -152,7 +153,7 @@ Signals come from mod events (names per this build's `claude-code.d.ts`):
 | waiting → working (**rejected / Esc**) | the matching `tool.call` (same `tool_use_id`) resolves with `deny` or rejects as aborted |
 | waiting → working (**question answered**) | `AskUserQuestion` `tool.call` resolves |
 | waiting → working (**approved, tool now running**) | **open: see Risk 0.** Fallback: the matching `tool.call` resolves |
-| → done | `turn.complete` |
+| → done | `turn.complete` of the main loop, once no subagent turn is still running (a background agent keeps the lane working, Ravi) |
 | → error | `turn.complete` that ended on an API error (the mod's equivalent of `StopFailure`). Tool failures alone do **not** turn the lane red: failed greps and non-zero exits are routine (**my call**). |
 | error → working | `prompt.submit` |
 | gone, lane freed | `session.end` not followed by a new session in the same process |

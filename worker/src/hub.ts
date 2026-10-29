@@ -1,6 +1,6 @@
 import type { ClientEvent, RGB } from "../../shared/protocol";
 import { compose, type WledState } from "./compose";
-import { apply, expire, type Hub } from "./lanes";
+import { apply, expire, pulseEnd, type Hub } from "./lanes";
 import { pickDistinctColor } from "./palette";
 
 export type Store = {
@@ -36,7 +36,7 @@ export class StatusHubCore {
   // already current), false when the publish failed.
   private flush(force: boolean): Promise<boolean> {
     return this.serial("queue", async () => {
-      const payload = JSON.stringify(compose(await this.hub(), await this.idle(), this.bri));
+      const payload = JSON.stringify(compose(await this.hub(), await this.idle(), this.bri, this.clock()));
       if (!force && payload === (await this.store.get<string>("last"))) return true;
       try {
         await this.publisher(payload);
@@ -85,12 +85,17 @@ export class StatusHubCore {
     await this.flush(false);
   }
 
+  // When the panel next needs a republish: a done pulse ending, else null.
+  async wakeAt(): Promise<number | null> {
+    return pulseEnd(await this.hub(), this.clock());
+  }
+
   async hasIdle(): Promise<boolean> {
     return (await this.idle()) !== null;
   }
 
   async snapshot(): Promise<{ hub: Hub; wled: WledState }> {
     const hub = await this.hub();
-    return { hub, wled: compose(hub, await this.idle(), this.bri) };
+    return { hub, wled: compose(hub, await this.idle(), this.bri, this.clock()) };
   }
 }

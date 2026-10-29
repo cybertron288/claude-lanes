@@ -39,6 +39,8 @@ export type Tracker = {
   sessionStart(): void
   turnStart(): void
   turnComplete(reason: string): void
+  subagentTurnStart(turnId: string): void
+  subagentTurnEnd(turnId: string): void
   askStart(id: string): void
   askEnd(id: string): void
   approved(id: string): void
@@ -46,8 +48,9 @@ export type Tracker = {
 }
 
 // The terminal's lane state: `waiting` while any ask is open past the grace
-// with the Spinner quiet, otherwise the base state the main loop's turns set.
-// Reports only changes.
+// with the Spinner quiet, otherwise the base state the main loop's turns set,
+// except that a done main loop stays working while any subagent turn runs (a
+// background agent outlives the turn that started it). Reports only changes.
 export function createTracker(
   onState: (s: LaneState) => void,
   schedule: Schedule,
@@ -59,9 +62,11 @@ export function createTracker(
   // Null until the surface draws a Spinner; then the grace alone decides.
   let spunAt: number | null = null
   const asks = new Map<string, { isConfirmed: boolean; cancel: () => void }>()
+  const subagentTurns = new Set<string>()
 
   const emit = () => {
-    const next = [...asks.values()].some(a => a.isConfirmed) ? 'waiting' : base
+    const isSubagentBusy = base === 'done' && subagentTurns.size > 0
+    const next = [...asks.values()].some(a => a.isConfirmed) ? 'waiting' : isSubagentBusy ? 'working' : base
     if (next === null || next === shown) return
     shown = next
     onState(next)
@@ -82,6 +87,13 @@ export function createTracker(
     sessionStart: () => setBase('done'),
     turnStart: () => setBase('working'),
     turnComplete: reason => setBase(reason === 'error' ? 'error' : 'done'),
+    subagentTurnStart(turnId) {
+      subagentTurns.add(turnId)
+      emit()
+    },
+    subagentTurnEnd(turnId) {
+      if (subagentTurns.delete(turnId)) emit()
+    },
     askStart(id) {
       if (asks.has(id)) return
       const ask = { isConfirmed: false, cancel: () => {} }

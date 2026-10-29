@@ -13,7 +13,7 @@ const lane = (terminal: string, slot: number | null, state: LaneState, color: RG
   color,
   lastSeen: 0,
 });
-const segs = (hub: Hub, idle: RGB[] | null = null) => compose(hub, idle, 128).seg as Seg[];
+const segs = (hub: Hub, idle: RGB[] | null = null, now = 0) => compose(hub, idle, 128, now).seg as Seg[];
 const byId = (all: Seg[], id: number) => all.find((s) => s.id === id)!;
 const idle: RGB[] = Array.from({ length: 128 }, (_, i) => [i, 0, 255 - i]);
 
@@ -26,7 +26,7 @@ describe("compose", () => {
   });
 
   test("no lanes and no idle frame: segment 0 is full-panel black, and on stays true", () => {
-    const state = compose({ lanes: [] }, null, 128);
+    const state = compose({ lanes: [] }, null, 128, 0);
     expect(state.on).toBe(true);
     expect(byId(state.seg as Seg[], 0)).toMatchObject({ start: 0, stop: 16, startY: 0, stopY: 8, fx: FX.solid.fx, col: [[0, 0, 0]] });
   });
@@ -41,6 +41,16 @@ describe("compose", () => {
     expect(byId(all, 4)).toMatchObject({ start: 4, stop: 5, startY: 0, stopY: 6, fx: FX.blink.fx, col: [ERROR_RED] });
     expect(byId(all, 5)).toMatchObject({ start: 4, stop: 5, startY: 6, stopY: 8 });
     expect(DONE_GREEN).toEqual([20, 90, 40]);
+  });
+
+  test("a lane that just turned done breathes green for 20 s, then holds steady", () => {
+    const hub = { lanes: [{ ...lane("a", 0, "done"), doneAt: 1000 }] };
+    expect(byId(segs(hub, null, 20_999), 0)).toMatchObject({ fx: FX.breathe.fx, col: [DONE_GREEN] });
+    expect(byId(segs(hub, null, 21_000), 0)).toMatchObject({ fx: FX.solid.fx, col: [DONE_GREEN] });
+  });
+
+  test("a done lane with no doneAt (a new session) is steady at once", () => {
+    expect(byId(segs({ lanes: [lane("a", 0, "done")] }), 0)).toMatchObject({ fx: FX.solid.fx });
   });
 
   test("any waiting lane: segment 0 breathes amber over 16×6 and only waiting strips stay", () => {

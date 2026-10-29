@@ -96,8 +96,10 @@ export const register: Register = (on, options) => {
       : 'cc-status-light is not set up: set workerUrl and token in /plugin → cc-status-light → configure.',
   }))
 
+  // The engine pairs every turn.start with its turn.complete, aborts included.
   on('turn.start', async ($, e, next) => {
-    if (tracker && !e.agentId) {
+    if (tracker && e.agentId) tracker.subagentTurnStart(e.turnId)
+    else if (tracker) {
       tracker.turnStart()
       void keepTerminal($).catch(() => {})
     }
@@ -105,7 +107,8 @@ export const register: Register = (on, options) => {
   })
 
   on('turn.complete', async ($, e, next) => {
-    if (tracker && !e.agentId) tracker.turnComplete(e.reason)
+    if (tracker && e.agentId) tracker.subagentTurnEnd(e.turnId)
+    else if (tracker) tracker.turnComplete(e.reason)
     return next(e)
   })
 

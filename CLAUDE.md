@@ -31,7 +31,9 @@ Claude Code mod (each Mac) ─HTTPS+bearer─▶ Cloudflare Worker + Durable Obj
     Spinner drawing, then approves silently; a dialog hides it).
   - Answered: a `ToolGroup`/`ToolUse` render with `isRunning: true` for that id,
     or the `tool.call` result at the latest. Subagent calls never render.
-  - `turn.*` events with `agentId` are subagent loops; ignore them for base state.
+  - `turn.*` events with `agentId` are subagent loops: they never set the base
+    state, but while any runs a `done` main loop shows `working` (a background
+    agent outlives the turn that started it).
   - Never use `classic.*` events: `cc-plugin-sec-default` swallows them on
     Ravi's machines.
   - `protocol.ts` copies `shared/protocol.ts` and `parseColor` (a mod cannot
@@ -42,6 +44,9 @@ Claude Code mod (each Mac) ─HTTPS+bearer─▶ Cloudflare Worker + Durable Obj
   each publish composes the latest state. Pure logic: `lanes.ts` (reducer),
   `palette.ts`, `compose.ts`. `do.ts` imports `cloudflare:workers`, so tests
   never import it; `cloudflare.d.ts` types that module for `tsc`.
+- **Done pulse:** a lane that turns `done` from another state gets `doneAt`;
+  `compose` breathes it for `DONE_PULSE_MS` (20 s), and the Durable Object
+  sets its alarm to the pulse end (`wakeAt`) to republish it steady.
 - **Segment ids** are stable: lane slot s → state `2s`, strip `2s+1`. The
   takeover and the idle or black frame reuse `0` (neither draws lane 0), so
   16 ids fit an ESP8266's segment limit. Every frame sends all 16, unused ones as

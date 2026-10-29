@@ -36,8 +36,11 @@ export class StatusHub extends DurableObject<HubEnv> {
     });
   }
 
+  // Wakes for the next republish, or sooner when a done pulse ends first.
   private async armAlarm(): Promise<void> {
-    if ((await this.ctx.storage.getAlarm()) === null) await this.ctx.storage.setAlarm(Date.now() + REPUBLISH_MS);
+    const set = await this.ctx.storage.getAlarm();
+    const wake = Math.min(set ?? Date.now() + REPUBLISH_MS, (await this.core.wakeAt()) ?? Infinity);
+    if (wake !== set) await this.ctx.storage.setAlarm(wake);
   }
 
   async fetch(req: Request): Promise<Response> {
@@ -46,6 +49,7 @@ export class StatusHub extends DurableObject<HubEnv> {
     if (path === "/event") {
       // 503 when the broker did not take the frame, so the mod retries.
       const isShown = await this.core.event((await req.json()) as ClientEvent);
+      await this.armAlarm();
       return new Response(null, { status: isShown ? 204 : 503 });
     }
     if (path === "/refresh") {
@@ -58,6 +62,6 @@ export class StatusHub extends DurableObject<HubEnv> {
   async alarm(): Promise<void> {
     if (!(await this.core.hasIdle())) await this.refresh();
     await this.core.alarm();
-    await this.ctx.storage.setAlarm(Date.now() + REPUBLISH_MS);
+    await this.ctx.storage.setAlarm(Math.min(Date.now() + REPUBLISH_MS, (await this.core.wakeAt()) ?? Infinity));
   }
 }

@@ -2,7 +2,18 @@ import type { ClientEvent, LaneState, RGB } from "../../shared/protocol";
 
 export const MAX_LANES = 8;
 
-export type Lane = { terminal: string; slot: number | null; state: LaneState; color: RGB; lastSeen: number };
+export const DONE_PULSE_MS = 20_000;
+
+// doneAt: when the lane last turned done from another state, so a finished
+// task pulses for DONE_PULSE_MS. A lane that starts as done has none.
+export type Lane = {
+  terminal: string;
+  slot: number | null;
+  state: LaneState;
+  color: RGB;
+  lastSeen: number;
+  doneAt?: number;
+};
 
 // Lanes are kept in arrival order; that order decides who takes a freed slot.
 export type Hub = { lanes: Lane[] };
@@ -38,9 +49,20 @@ export function apply(hub: Hub, ev: ClientEvent, now: number, pick: (inUse: RGB[
     return { lanes: promote([...hub.lanes, lane]) };
   }
 
-  const changed: Lane =
-    ev.kind === "state" ? { ...known, state: ev.state, lastSeen: now } : { ...known, color: ev.color, lastSeen: now };
+  const changed: Lane = ev.kind === "color" ? { ...known, color: ev.color, lastSeen: now } : withState(known, ev.state, now);
   return { lanes: hub.lanes.map((l) => (l === known ? changed : l)) };
+}
+
+function withState(lane: Lane, state: LaneState, now: number): Lane {
+  const { doneAt, ...rest } = lane;
+  if (state !== "done") return { ...rest, state, lastSeen: now };
+  return { ...rest, state, lastSeen: now, doneAt: lane.state === "done" ? doneAt : now };
+}
+
+// When the next done pulse ends, if any is still running at `now`.
+export function pulseEnd(hub: Hub, now: number): number | null {
+  const ends = hub.lanes.flatMap((l) => (l.doneAt !== undefined && now < l.doneAt + DONE_PULSE_MS ? [l.doneAt + DONE_PULSE_MS] : []));
+  return ends.length > 0 ? Math.min(...ends) : null;
 }
 
 export function expire(hub: Hub, now: number, ttlMs = 12 * 3600_000): Hub {
