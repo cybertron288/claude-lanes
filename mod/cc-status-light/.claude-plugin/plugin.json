@@ -1,0 +1,21 @@
+{
+  "name": "cc-status-light",
+  "version": "0.1.0",
+  "description": "Shows this session's state on a WLED LED matrix: working, done, error, and an amber pulse while it waits for you.",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "workerUrl": {
+      "type": "string",
+      "title": "Worker URL",
+      "description": "The status-light Worker, e.g. https://cc-status-light.<account>.workers.dev",
+      "default": ""
+    },
+    "token": {
+      "type": "string",
+      "title": "Ingest token",
+      "description": "The Worker's INGEST_TOKEN secret",
+      "sensitive": true,
+      "default": ""
+    }
+  }
+}
