@@ -33,7 +33,7 @@ function setup() {
   };
 }
 
-const grid: RGB[] = Array.from({ length: 128 }, () => [0, 109, 50]);
+const grid: RGB[] = Array.from({ length: 128 }, () => [0, 109, 0]);
 
 describe("StatusHubCore", () => {
   test("an event that changes the composed output publishes once", async () => {
@@ -105,7 +105,7 @@ describe("StatusHubCore", () => {
   test("refreshIdle success with no lanes publishes the new idle frame", async () => {
     const { core, sent } = setup();
     await core.refreshIdle(async () => grid);
-    expect(JSON.parse(sent[0]!).seg[0].i[0]).toBe("006D32");
+    expect(JSON.parse(sent[0]!).seg[0].i[0]).toBe("006D00");
   });
 
   test("a failing publisher never throws out of event(), and the next alarm() publishes", async () => {
