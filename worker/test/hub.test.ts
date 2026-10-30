@@ -73,6 +73,21 @@ describe("StatusHubCore", () => {
     tick(20_000);
     await core.alarm();
     expect(JSON.parse(sent.at(-1)!).seg[0]).toMatchObject({ id: 0, fx: 0 });
+    expect(await core.wakeAt()).toBe(6000 + 10 * 60_000);
+  });
+
+  test("a finished lane goes quiet for 10 minutes, then alarm() switches the panel to the graph", async () => {
+    const { core, sent, tick } = setup();
+    await core.refreshIdle(async () => grid);
+    await core.event({ kind: "state", terminal: "a", state: "working" });
+    await core.event({ kind: "state", terminal: "a", state: "done" });
+    expect(JSON.parse(sent.at(-1)!).seg[0]).toMatchObject({ id: 0, stop: 1 });
+    expect(await core.wakeAt()).toBe(1000 + 20_000);
+    tick(20_000);
+    expect(await core.wakeAt()).toBe(1000 + 10 * 60_000);
+    tick(10 * 60_000 - 20_000);
+    await core.alarm();
+    expect(JSON.parse(sent.at(-1)!).seg[0]).toMatchObject({ id: 0, stop: 16, i: expect.any(Array) });
     expect(await core.wakeAt()).toBeNull();
   });
 

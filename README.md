@@ -16,8 +16,9 @@ When a session waits for you (a permission dialog, a question, a plan to
 approve), its lane turns solid amber and the columns either side of it breathe
 amber. The other lanes keep running, dimmed. A waiting session past the 8th
 lane has no column to light, so then the top 6 rows pulse amber across the
-whole panel instead. With no sessions alive, the panel shows your GitHub
-contribution graph.
+whole panel instead. With no sessions alive, or when every session has been done or in error for
+10 minutes, the panel shows your GitHub contribution graph. A working or waiting
+session never counts as idle.
 
 It works for sessions on any machine. Nothing but the lane state and color
 leaves a Mac: no prompts, paths or repo names.

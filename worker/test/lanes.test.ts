@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { RGB } from "../../shared/protocol";
-import { apply, expire, pulseEnd, slotX, type Hub } from "../src/lanes";
+import { apply, expire, idleAt, IDLE_MS, isIdle, pulseEnd, slotX, type Hub, type Lane } from "../src/lanes";
 
 const PICKED: RGB = [1, 2, 3];
 const pick = () => PICKED;
@@ -110,4 +110,28 @@ describe("expire", () => {
 
 test("slotX spaces lanes 2 columns apart", () => {
   expect([0, 1, 2, 3, 4, 5, 6, 7].map(slotX)).toEqual([0, 2, 4, 6, 8, 10, 12, 14]);
+});
+
+describe("idle", () => {
+  const mk = (state: Lane["state"], lastSeen: number): Lane => ({ terminal: state, slot: 0, state, color: PICKED, lastSeen });
+
+  test("a done or error lane is idle once IDLE_MS has passed since it last reported", () => {
+    expect(IDLE_MS).toBe(10 * 60_000);
+    for (const state of ["done", "error"] as const) {
+      expect(isIdle(mk(state, 1000), 1000 + IDLE_MS - 1)).toBe(false);
+      expect(isIdle(mk(state, 1000), 1000 + IDLE_MS)).toBe(true);
+    }
+  });
+
+  test("a working or waiting lane is never idle, however long it has been quiet", () => {
+    for (const state of ["working", "waiting"] as const) expect(isIdle(mk(state, 0), 5 * IDLE_MS)).toBe(false);
+  });
+
+  test("idleAt is the earliest moment a still-live done or error lane turns idle, else null", () => {
+    const hub: Hub = { lanes: [mk("working", 0), { ...mk("done", 4000), slot: 1 }, { ...mk("error", 1000), slot: 2 }] };
+    expect(idleAt(hub, 2000)).toBe(1000 + IDLE_MS);
+    expect(idleAt(hub, 1000 + IDLE_MS)).toBe(4000 + IDLE_MS);
+    expect(idleAt(hub, 4000 + IDLE_MS)).toBeNull();
+    expect(idleAt({ lanes: [mk("working", 0)] }, 0)).toBeNull();
+  });
 });

@@ -36,7 +36,7 @@ export class StatusHub extends DurableObject<HubEnv> {
     });
   }
 
-  // Wakes for the next republish, or sooner when a done pulse ends first.
+  // Wakes for the next republish, or sooner when a done pulse ends or a lane turns idle.
   private async armAlarm(): Promise<void> {
     const set = await this.ctx.storage.getAlarm();
     const wake = Math.min(set ?? Date.now() + REPUBLISH_MS, (await this.core.wakeAt()) ?? Infinity);

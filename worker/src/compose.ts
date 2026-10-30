@@ -1,6 +1,6 @@
 import type { LaneState, RGB } from "../../shared/protocol";
 import { FX, type Effect } from "./effects";
-import { DONE_PULSE_MS, MAX_LANES, slotX, type Hub, type Lane } from "./lanes";
+import { DONE_PULSE_MS, isIdle, MAX_LANES, slotX, type Hub, type Lane } from "./lanes";
 
 export const WORKING_BLUE: RGB = [40, 110, 255];
 export const DONE_GREEN: RGB = [20, 90, 10];
@@ -52,7 +52,7 @@ export function compose(hub: Hub, idle: RGB[] | null, bri: number, now: number):
   const strip = (slot: number, color: RGB, bri = FULL) =>
     drawn.set(2 * slot + 1, segment(2 * slot + 1, columns(slot), [6, 8], FX.solid, color, bri));
 
-  if (slotted.length === 0) {
+  if (hub.lanes.every((l) => isIdle(l, now))) {
     const { col, ...full } = segment(FULL_ID, [0, 16], [0, 8], FX.solid, [0, 0, 0]);
     drawn.set(FULL_ID, idle ? { ...full, i: idle.map(hex) } : { ...full, col });
   } else if (hub.lanes.some((l) => l.state === "waiting" && l.slot === null)) {

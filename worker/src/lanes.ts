@@ -4,6 +4,11 @@ export const MAX_LANES = 8;
 
 export const DONE_PULSE_MS = 20_000;
 
+// A done or error lane that has been quiet this long counts as idle. When every
+// lane is idle the panel shows the contribution graph. A working lane may run
+// a long step without reporting and a waiting lane needs you, so neither idles.
+export const IDLE_MS = 10 * 60_000;
+
 // doneAt: when the lane last turned done from another state, so a finished
 // task pulses for DONE_PULSE_MS. A lane that starts as done has none.
 export type Lane = {
@@ -63,6 +68,16 @@ function withState(lane: Lane, state: LaneState, now: number): Lane {
 export function pulseEnd(hub: Hub, now: number): number | null {
   const ends = hub.lanes.flatMap((l) => (l.doneAt !== undefined && now < l.doneAt + DONE_PULSE_MS ? [l.doneAt + DONE_PULSE_MS] : []));
   return ends.length > 0 ? Math.min(...ends) : null;
+}
+
+export function isIdle(lane: Lane, now: number): boolean {
+  return (lane.state === "done" || lane.state === "error") && now - lane.lastSeen >= IDLE_MS;
+}
+
+// When the next live done or error lane turns idle, if any is still live at `now`.
+export function idleAt(hub: Hub, now: number): number | null {
+  const times = hub.lanes.flatMap((l) => (!isIdle(l, now) && (l.state === "done" || l.state === "error") ? [l.lastSeen + IDLE_MS] : []));
+  return times.length > 0 ? Math.min(...times) : null;
 }
 
 export function expire(hub: Hub, now: number, ttlMs = 12 * 3600_000): Hub {

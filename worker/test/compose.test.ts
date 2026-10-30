@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { LaneState, RGB } from "../../shared/protocol";
 import { AMBER, compose, DIMMED, DONE_GREEN, ERROR_RED, GLOW, WORKING_BLUE } from "../src/compose";
 import { FX } from "../src/effects";
-import type { Hub, Lane } from "../src/lanes";
+import { IDLE_MS, type Hub, type Lane } from "../src/lanes";
 
 type Seg = Record<string, unknown> & { id: number };
 
@@ -29,6 +29,33 @@ describe("compose", () => {
     const state = compose({ lanes: [] }, null, 128, 0);
     expect(state.on).toBe(true);
     expect(byId(state.seg as Seg[], 0)).toMatchObject({ start: 0, stop: 16, startY: 0, stopY: 8, fx: FX.solid.fx, col: [[0, 0, 0]] });
+  });
+
+  test("when every lane has been done or errored for 10 minutes, the panel shows the idle graph", () => {
+    const hub = { lanes: [lane("a", 0, "done"), lane("b", 1, "error")] };
+    const s = byId(segs(hub, idle, IDLE_MS), 0);
+    expect(s).toMatchObject({ start: 0, stop: 16, startY: 0, stopY: 8 });
+    expect((s.i as string[]).length).toBe(128);
+    expect(byId(segs(hub, idle, IDLE_MS), 1)).toEqual({ id: 1, stop: 0 });
+  });
+
+  test("a done lane not yet 10 minutes quiet keeps the lanes up", () => {
+    const hub = { lanes: [lane("a", 0, "done")] };
+    expect(byId(segs(hub, idle, IDLE_MS - 1), 0)).toMatchObject({ start: 0, stop: 1, col: [DONE_GREEN] });
+  });
+
+  test("one live lane keeps every lane up, including the idle ones", () => {
+    const hub = { lanes: [lane("a", 0, "done"), lane("b", 1, "working")] };
+    const all = segs(hub, idle, 3 * IDLE_MS);
+    expect(byId(all, 0)).toMatchObject({ start: 0, stop: 1, col: [DONE_GREEN] });
+    expect(byId(all, 2)).toMatchObject({ start: 2, stop: 3, fx: FX.sonar.fx });
+  });
+
+  test("a lane that is working or waiting never lets the graph take over", () => {
+    for (const state of ["working", "waiting"] as const) {
+      const all = segs({ lanes: [lane("a", 0, state)] }, idle, 5 * IDLE_MS);
+      expect(byId(all, 0)).toMatchObject({ start: 0, stop: 1 });
+    }
   });
 
   test("three lanes: each gets a 1-column state segment over rows 0–6 and a strip over rows 6–8", () => {

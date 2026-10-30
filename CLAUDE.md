@@ -7,7 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Claude Code session status on a 16×8 WLED LED matrix. Each interactive session
 gets a lane. A waiting session's lane turns solid amber between two breathing
 amber columns while the other lanes dim (Spotlight). With no
-live sessions, the panel shows the GitHub contribution graph. `README.md` has
+live sessions, or when every lane has been `done`/`error` for `IDLE_MS` (10 min),
+the panel shows the GitHub contribution graph. `README.md` has
 setup; the spec (`docs/superpowers/specs/2026-10-29-cc-status-light-design.md`)
 holds settled decisions, and the plan (`docs/superpowers/plans/`) the build order.
 
@@ -56,6 +57,10 @@ Claude Code mod (each Mac) ─HTTPS+bearer─▶ Cloudflare Worker + Durable Obj
   `{ id, stop: 0 }`, every drawn segment carries `bri` (segment opacity: 255,
   or `DIMMED` for the other lanes while one waits), and always `on: true`
   (WLED drops pixels when one request turns it on and sets them).
+- **Idle:** `isIdle` (`lanes.ts`) is a `done`/`error` lane quiet for 10 min;
+  `working` and `waiting` never idle. `compose` shows the graph when every lane
+  is idle, and `wakeAt` includes `idleAt` so the alarm republishes at the switch.
+  Lanes stay in the hub until the 12 h `expire`.
 - **Waiting (Spotlight):** the full-panel amber takeover is only for a waiting
   lane with `slot: null` (a 9th terminal has no column to light).
 - **MQTT** (`worker/src/mqtt.ts`): hand-written MQTT 3.1.1 over WebSocket. Broker
