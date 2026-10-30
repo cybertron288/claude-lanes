@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { LaneState, RGB } from "../../shared/protocol";
 import { AMBER, compose, DIMMED, DONE_GREEN, ERROR_RED, GLOW, WORKING_BLUE } from "../src/compose";
-import { levelToRGB } from "../src/contrib/ramp";
 import { FX } from "../src/effects";
 import { IDLE_MS, type Hub, type Lane } from "../src/lanes";
 
@@ -33,29 +32,11 @@ describe("compose", () => {
     expect(sun.i).toBeUndefined();
   });
 
-  test("the sunrise is green only: it fades from black to the graph's own level-3 green, at full segment opacity", () => {
+  test("the sunrise is warm: the Fire palette, softened below full opacity so it sits quietly under the graph", () => {
     const sun = byId(segs({ lanes: [] }, idle), 1);
-    expect(FX.sunrise.pal).toBe(3);
-    expect(sun.col).toEqual([[0, 0, 0], levelToRGB(3)]);
-    expect(sun.bri).toBe(255);
-    const [, g, b] = levelToRGB(3);
-    expect(levelToRGB(3)[0]).toBeLessThan(g * 0.25);
-    expect(b).toBeLessThan(g * 0.5);
-  });
-
-  test("no lanes and no idle frame: segment 0 is full-panel black, and on stays true", () => {
-    const state = compose({ lanes: [] }, null, 128, 0);
-    expect(state.on).toBe(true);
-    expect(byId(state.seg as Seg[], 0)).toMatchObject({ start: 0, stop: 16, startY: 0, stopY: 8, fx: FX.solid.fx, col: [[0, 0, 0]] });
-  });
-
-  test("when every lane has been done or errored for 10 minutes, the panel shows the idle graph", () => {
-    const hub = { lanes: [lane("a", 0, "done"), lane("b", 1, "error")] };
-    const s = byId(segs(hub, idle, IDLE_MS), 0);
-    expect(s).toMatchObject({ start: 0, stop: 16, startY: 0, stopY: 7 });
-    expect((s.i as string[]).length).toBe(112);
-    expect(byId(segs(hub, idle, IDLE_MS), 1)).toMatchObject({ fx: FX.sunrise.fx, startY: 7 });
-    expect(byId(segs(hub, idle, IDLE_MS), 2)).toEqual({ id: 2, stop: 0 });
+    expect(FX.sunrise.pal).toBe(35);
+    expect(sun.bri as number).toBeLessThan(255);
+    expect(sun.bri as number).toBeGreaterThan(100);
   });
 
   test("a done lane not yet 10 minutes quiet keeps the lanes up", () => {

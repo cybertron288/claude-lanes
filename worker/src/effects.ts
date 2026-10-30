@@ -13,8 +13,6 @@ export const FX = {
   sonar: { fx: 41, sx: 200, ix: 160, m12: 1, mY: true },
   // Sunrise (104) with speed above 120 loops rise and set, one cycle every
   // 131 s / (((sx - 120) >> 1) + 1): sx 124 is about 44 s. Speed 1–60 rises
-  // once and then holds, so it would not breathe. Palette 3 fades from the
-  // segment's first color to its second, so the glow takes its colors from
-  // the segment and stays one hue.
-  sunrise: { fx: 104, sx: 124, ix: 128, pal: 3 },
+  // once and then holds, so it would not breathe. Palette 35 is Fire.
+  sunrise: { fx: 104, sx: 124, ix: 128, pal: 35 },
 } as const satisfies Record<string, Effect>;

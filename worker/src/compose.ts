@@ -1,5 +1,4 @@
 import type { LaneState, RGB } from "../../shared/protocol";
-import { levelToRGB } from "./contrib/ramp";
 import { FX, type Effect } from "./effects";
 import { DONE_PULSE_MS, isIdle, MAX_LANES, slotX, type Hub, type Lane } from "./lanes";
 
@@ -13,10 +12,10 @@ export const AMBER: RGB = [255, 150, 0];
 const FULL = 255;
 export const DIMMED = 77;
 export const GLOW = 150;
-// The idle graph draws rows 0–6; the Sunrise below it fades black to the
-// graph's own level-3 green and so never outshines a graph pixel.
+// The idle graph draws rows 0–6 and stays green only; the warm Sunrise below it
+// breathes at SUNRISE_BRI so it sits quietly under the graph.
 const GRAPH_ROWS = 7;
-const SUNRISE_COLORS: RGB[] = [[0, 0, 0], levelToRGB(3)];
+const SUNRISE_BRI = 160;
 const SUNRISE_ID = 1;
 
 // Stable segment ids: lane slot s → state 2s, strip 2s + 1. The takeover and
@@ -65,7 +64,7 @@ export function compose(hub: Hub, idle: RGB[] | null, bri: number, now: number):
     if (idle) {
       const { col, ...rows } = segment(FULL_ID, [0, 16], [0, GRAPH_ROWS], FX.solid, [0, 0, 0]);
       drawn.set(FULL_ID, { ...rows, i: idle.slice(0, 16 * GRAPH_ROWS).map(hex) });
-      drawn.set(SUNRISE_ID, segment(SUNRISE_ID, [0, 16], [GRAPH_ROWS, 8], FX.sunrise, SUNRISE_COLORS));
+      drawn.set(SUNRISE_ID, segment(SUNRISE_ID, [0, 16], [GRAPH_ROWS, 8], FX.sunrise, [0, 0, 0], SUNRISE_BRI));
     } else drawn.set(FULL_ID, segment(FULL_ID, [0, 16], [0, 8], FX.solid, [0, 0, 0]));
   } else if (hub.lanes.some((l) => l.state === "waiting" && l.slot === null)) {
     // A 9th terminal waiting has no lane to light, so the whole panel asks.
