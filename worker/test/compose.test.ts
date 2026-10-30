@@ -58,6 +58,14 @@ describe("compose", () => {
     }
   });
 
+  test("every lane frame thaws its segments: WLED freezes a segment that was given pixels, e.g. the idle graph on id 0", () => {
+    const all = segs({ lanes: [lane("a", 0, "working"), lane("b", 1, "waiting")] }).filter((s) => s.stop !== 0);
+    expect(all.length).toBeGreaterThan(0);
+    for (const s of all) expect(s.frz).toBe(false);
+    expect(byId(segs({ lanes: [] }, null), 0).frz).toBe(false);
+    expect(byId(segs({ lanes: [lane("a", 0, "waiting"), lane("x", null, "waiting")] }), 0).frz).toBe(false);
+  });
+
   test("three lanes: each gets a 1-column state segment over rows 0–6 and a strip over rows 6–8", () => {
     const all = segs({
       lanes: [lane("a", 0, "working", [9, 9, 9]), lane("b", 1, "done"), lane("c", 2, "error")],

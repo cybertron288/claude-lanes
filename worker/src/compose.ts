@@ -39,8 +39,10 @@ function look(lane: Lane, now: number): { effect: Effect; color: RGB } {
   return isFresh ? { effect: FX.breathe, color: DONE_GREEN } : LOOK[lane.state as Exclude<LaneState, "waiting">];
 }
 
+// WLED freezes a segment that is given pixels (the idle graph on id 0) and keeps
+// it frozen until told otherwise, so every segment carries frz: false.
 function segment(id: number, x: [number, number], y: [number, number], effect: Effect, color: RGB, bri = FULL) {
-  return { id, start: x[0], stop: x[1], startY: y[0], stopY: y[1], fx: effect.fx, sx: effect.sx, ix: effect.ix, m12: effect.m12 ?? 0, mY: effect.mY ?? false, bri, col: [color] };
+  return { id, start: x[0], stop: x[1], startY: y[0], stopY: y[1], fx: effect.fx, sx: effect.sx, ix: effect.ix, m12: effect.m12 ?? 0, mY: effect.mY ?? false, bri, frz: false, col: [color] };
 }
 
 const hex = (c: RGB) => c.map((v) => v.toString(16).padStart(2, "0")).join("").toUpperCase();
