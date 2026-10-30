@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { LaneState, RGB } from "../../shared/protocol";
 import { AMBER, compose, DIMMED, DONE_GREEN, ERROR_RED, GLOW, WORKING_BLUE } from "../src/compose";
+import { levelToRGB } from "../src/contrib/ramp";
 import { FX } from "../src/effects";
 import { IDLE_MS, type Hub, type Lane } from "../src/lanes";
 
@@ -30,7 +31,16 @@ describe("compose", () => {
     expect(sun).toMatchObject({ start: 0, stop: 16, startY: 7, stopY: 8, fx: FX.sunrise.fx, sx: FX.sunrise.sx, pal: FX.sunrise.pal, frz: false });
     expect(FX.sunrise.sx).toBeGreaterThan(120);
     expect(sun.i).toBeUndefined();
-    expect(sun.bri as number).toBeLessThan(255);
+  });
+
+  test("the sunrise is green only: it fades from black to the graph's own level-3 green, at full segment opacity", () => {
+    const sun = byId(segs({ lanes: [] }, idle), 1);
+    expect(FX.sunrise.pal).toBe(3);
+    expect(sun.col).toEqual([[0, 0, 0], levelToRGB(3)]);
+    expect(sun.bri).toBe(255);
+    const [, g, b] = levelToRGB(3);
+    expect(levelToRGB(3)[0]).toBeLessThan(g * 0.25);
+    expect(b).toBeLessThan(g * 0.5);
   });
 
   test("no lanes and no idle frame: segment 0 is full-panel black, and on stays true", () => {

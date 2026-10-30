@@ -20,7 +20,7 @@ whole panel instead.
 
 With no sessions alive, or when every session has been done or in error for
 10 minutes, the panel shows your GitHub contribution graph in rows 1–7, with a
-slow, looping sunrise glow along the bottom row. A working or waiting session
+slow, looping green sunrise glow along the bottom row. A working or waiting session
 never counts as idle.
 
 It works for sessions on any machine. Nothing but the lane state and color
