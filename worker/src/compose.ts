@@ -12,6 +12,10 @@ export const AMBER: RGB = [255, 150, 0];
 const FULL = 255;
 export const DIMMED = 77;
 export const GLOW = 150;
+// The idle graph draws rows 0–6; the Sunrise below it breathes at this opacity.
+const GRAPH_ROWS = 7;
+const SUNRISE_BRI = 160;
+const SUNRISE_ID = 1;
 
 // Stable segment ids: lane slot s → state 2s, strip 2s + 1. The takeover and
 // the idle or black frame reuse id 0, as neither draws lane 0's state. A
@@ -42,7 +46,7 @@ function look(lane: Lane, now: number): { effect: Effect; color: RGB } {
 // WLED freezes a segment that is given pixels (the idle graph on id 0) and keeps
 // it frozen until told otherwise, so every segment carries frz: false.
 function segment(id: number, x: [number, number], y: [number, number], effect: Effect, color: RGB, bri = FULL) {
-  return { id, start: x[0], stop: x[1], startY: y[0], stopY: y[1], fx: effect.fx, sx: effect.sx, ix: effect.ix, m12: effect.m12 ?? 0, mY: effect.mY ?? false, bri, frz: false, col: [color] };
+  return { id, start: x[0], stop: x[1], startY: y[0], stopY: y[1], fx: effect.fx, sx: effect.sx, ix: effect.ix, m12: effect.m12 ?? 0, mY: effect.mY ?? false, ...(effect.pal === undefined ? {} : { pal: effect.pal }), bri, frz: false, col: [color] };
 }
 
 const hex = (c: RGB) => c.map((v) => v.toString(16).padStart(2, "0")).join("").toUpperCase();
@@ -55,8 +59,11 @@ export function compose(hub: Hub, idle: RGB[] | null, bri: number, now: number):
     drawn.set(2 * slot + 1, segment(2 * slot + 1, columns(slot), [6, 8], FX.solid, color, bri));
 
   if (hub.lanes.every((l) => isIdle(l, now))) {
-    const { col, ...full } = segment(FULL_ID, [0, 16], [0, 8], FX.solid, [0, 0, 0]);
-    drawn.set(FULL_ID, idle ? { ...full, i: idle.map(hex) } : { ...full, col });
+    if (idle) {
+      const { col, ...rows } = segment(FULL_ID, [0, 16], [0, GRAPH_ROWS], FX.solid, [0, 0, 0]);
+      drawn.set(FULL_ID, { ...rows, i: idle.slice(0, 16 * GRAPH_ROWS).map(hex) });
+      drawn.set(SUNRISE_ID, segment(SUNRISE_ID, [0, 16], [GRAPH_ROWS, 8], FX.sunrise, [0, 0, 0], SUNRISE_BRI));
+    } else drawn.set(FULL_ID, segment(FULL_ID, [0, 16], [0, 8], FX.solid, [0, 0, 0]));
   } else if (hub.lanes.some((l) => l.state === "waiting" && l.slot === null)) {
     // A 9th terminal waiting has no lane to light, so the whole panel asks.
     drawn.set(FULL_ID, segment(FULL_ID, [0, 16], [0, 6], FX.breathe, AMBER));

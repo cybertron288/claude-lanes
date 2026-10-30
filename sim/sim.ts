@@ -8,12 +8,12 @@ import { decodePublish, encodeConnect, encodePingReq, encodeSubscribe } from "..
 
 const W = 16, H = 8;
 const LOOKS: Record<number, string> = {
-  [FX.solid.fx]: "solid", [FX.blink.fx]: "blink", [FX.breathe.fx]: "breathe", [FX.sonar.fx]: "sonar",
+  [FX.solid.fx]: "solid", [FX.blink.fx]: "blink", [FX.breathe.fx]: "breathe", [FX.sonar.fx]: "sonar", [FX.sunrise.fx]: "sunrise",
 };
 type RGB = [number, number, number];
 type Seg = {
   id: number; start?: number; stop?: number; startY?: number; stopY?: number;
-  fx?: number; col?: RGB[]; i?: (RGB | string)[]; bri?: number;
+  fx?: number; sx?: number; col?: RGB[]; i?: (RGB | string)[]; bri?: number;
 };
 const state: { on: boolean; bri: number; seg: Map<number, Seg>; at: string } = {
   on: false, bri: 128, seg: new Map(), at: "never",
@@ -51,8 +51,9 @@ function sonar(t,y,y0,y1){
     const ring=1-Math.abs(dist-age*SPEED)*SHARP;if(ring>0)lv=Math.max(lv,ring*(1-age/LIFE))}
   return lv;
 }
-function level(fx,t,y,y0,y1){
+function level(fx,t,y,y0,y1,x,x0,x1,sx){
   const look=LOOKS[fx];
+  if(look==='sunrise'){const cyc=131/(((sx-120)>>1)+1),ph=(t%cyc)/cyc,tri=ph<0.5?ph*2:2-ph*2,mid=(x0+x1-1)/2,d=Math.abs(x-mid)/((x1-x0)/2);return Math.max(0,Math.min(1,1.1*tri-d*tri*0.8))}
   if(look==='sonar')return sonar(t,y,y0,y1);
   if(look==='blink')return Math.sin(t*6)>0?1:0.08;
   if(look==='breathe')return 0.2+0.8*(0.5+0.5*Math.sin(t*3));
@@ -66,7 +67,7 @@ function draw(t){
     for(let y=y0;y<Math.min(y1,H);y++)for(let x=x0;x<Math.min(x1,W);x++){
       let c;
       if(s.i&&s.i.length){const v=s.i[(y-y0)*(x1-x0)+(x-x0)];if(!v)continue;c=hex(v)}
-      else c=col.map(v=>v*level(s.fx||0,t,y,y0,Math.min(y1,H)));
+      else c=col.map(v=>v*level(s.fx||0,t,y,y0,Math.min(y1,H),x,x0,x1,s.sx||128));
       c=c.map(v=>v*op);
       out[y*W+x]=c;
     }

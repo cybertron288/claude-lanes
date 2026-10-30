@@ -59,7 +59,8 @@ Claude Code mod (each Mac) ─HTTPS+bearer─▶ Cloudflare Worker + Durable Obj
   (WLED drops pixels when one request turns it on and sets them).
 - **Idle:** `isIdle` (`lanes.ts`) is a `done`/`error` lane quiet for 10 min;
   `working` and `waiting` never idle. `compose` shows the graph when every lane
-  is idle, and `wakeAt` includes `idleAt` so the alarm republishes at the switch.
+  is idle (graph pixels on segment 0, rows 0–6; a looping Sunrise, fx 104 with
+  speed > 120, on segment 1, row 7), and `wakeAt` includes `idleAt` so the alarm republishes at the switch.
   Lanes stay in the hub until the 12 h `expire`.
 - **Waiting (Spotlight):** the full-panel amber takeover is only for a waiting
   lane with `slot: null` (a 9th terminal has no column to light).

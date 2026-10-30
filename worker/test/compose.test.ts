@@ -18,11 +18,19 @@ const byId = (all: Seg[], id: number) => all.find((s) => s.id === id)!;
 const idle: RGB[] = Array.from({ length: 128 }, (_, i) => [i, 0, 255 - i]);
 
 describe("compose", () => {
-  test("no slotted lanes with an idle frame: segment 0 is full-panel and carries the pixels as hex", () => {
+  test("no slotted lanes with an idle frame: segment 0 carries the graph's top 7 rows as hex", () => {
     const s = byId(segs({ lanes: [] }, idle), 0);
-    expect(s).toMatchObject({ start: 0, stop: 16, startY: 0, stopY: 8 });
-    expect((s.i as string[]).length).toBe(128);
+    expect(s).toMatchObject({ start: 0, stop: 16, startY: 0, stopY: 7 });
+    expect((s.i as string[]).length).toBe(112);
     expect((s.i as string[])[1]).toBe("0100FE");
+  });
+
+  test("the idle graph leaves the bottom row to a looping Sunrise on its own segment", () => {
+    const sun = byId(segs({ lanes: [] }, idle), 1);
+    expect(sun).toMatchObject({ start: 0, stop: 16, startY: 7, stopY: 8, fx: FX.sunrise.fx, sx: FX.sunrise.sx, pal: FX.sunrise.pal, frz: false });
+    expect(FX.sunrise.sx).toBeGreaterThan(120);
+    expect(sun.i).toBeUndefined();
+    expect(sun.bri as number).toBeLessThan(255);
   });
 
   test("no lanes and no idle frame: segment 0 is full-panel black, and on stays true", () => {
@@ -34,9 +42,10 @@ describe("compose", () => {
   test("when every lane has been done or errored for 10 minutes, the panel shows the idle graph", () => {
     const hub = { lanes: [lane("a", 0, "done"), lane("b", 1, "error")] };
     const s = byId(segs(hub, idle, IDLE_MS), 0);
-    expect(s).toMatchObject({ start: 0, stop: 16, startY: 0, stopY: 8 });
-    expect((s.i as string[]).length).toBe(128);
-    expect(byId(segs(hub, idle, IDLE_MS), 1)).toEqual({ id: 1, stop: 0 });
+    expect(s).toMatchObject({ start: 0, stop: 16, startY: 0, stopY: 7 });
+    expect((s.i as string[]).length).toBe(112);
+    expect(byId(segs(hub, idle, IDLE_MS), 1)).toMatchObject({ fx: FX.sunrise.fx, startY: 7 });
+    expect(byId(segs(hub, idle, IDLE_MS), 2)).toEqual({ id: 2, stop: 0 });
   });
 
   test("a done lane not yet 10 minutes quiet keeps the lanes up", () => {
@@ -63,6 +72,7 @@ describe("compose", () => {
     expect(all.length).toBeGreaterThan(0);
     for (const s of all) expect(s.frz).toBe(false);
     expect(byId(segs({ lanes: [] }, null), 0).frz).toBe(false);
+    expect(byId(segs({ lanes: [] }, idle), 0).frz).toBe(false);
     expect(byId(segs({ lanes: [lane("a", 0, "waiting"), lane("x", null, "waiting")] }), 0).frz).toBe(false);
   });
 
