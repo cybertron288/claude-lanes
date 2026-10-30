@@ -40,7 +40,7 @@ describe("compose", () => {
     expect(byId(all, 2)).toMatchObject({ start: 2, stop: 3, startY: 0, stopY: 6, fx: FX.solid.fx, col: [DONE_GREEN] });
     expect(byId(all, 4)).toMatchObject({ start: 4, stop: 5, startY: 0, stopY: 6, fx: FX.blink.fx, col: [ERROR_RED] });
     expect(byId(all, 5)).toMatchObject({ start: 4, stop: 5, startY: 6, stopY: 8 });
-    expect(DONE_GREEN).toEqual([20, 90, 40]);
+    expect(DONE_GREEN).toEqual([20, 90, 10]);
   });
 
   test("a lane that just turned done breathes green for 20 s, then holds steady", () => {

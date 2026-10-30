@@ -3,7 +3,7 @@ import { FX, type Effect } from "./effects";
 import { DONE_PULSE_MS, MAX_LANES, slotX, type Hub, type Lane } from "./lanes";
 
 export const WORKING_BLUE: RGB = [40, 110, 255];
-export const DONE_GREEN: RGB = [20, 90, 40];
+export const DONE_GREEN: RGB = [20, 90, 10];
 export const ERROR_RED: RGB = [220, 30, 30];
 export const AMBER: RGB = [255, 150, 0];
 
