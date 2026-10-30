@@ -1,0 +1,1 @@
+{ "name": "approval-signal-spike", "version": "0.1.0", "description": "Throwaway: logs permission-dialog signals", "types": "./types/index.d.ts" }

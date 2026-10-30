@@ -1,0 +1,30 @@
+{
+  "data": {
+    "user": {
+      "contributionsCollection": {
+        "contributionCalendar": {
+          "weeks": [
+            {
+              "contributionDays": [
+                { "weekday": 0, "contributionLevel": "NONE" },
+                { "weekday": 1, "contributionLevel": "FIRST_QUARTILE" },
+                { "weekday": 2, "contributionLevel": "SECOND_QUARTILE" },
+                { "weekday": 3, "contributionLevel": "THIRD_QUARTILE" },
+                { "weekday": 4, "contributionLevel": "FOURTH_QUARTILE" },
+                { "weekday": 5, "contributionLevel": "NONE" },
+                { "weekday": 6, "contributionLevel": "NONE" }
+              ]
+            },
+            {
+              "contributionDays": [
+                { "weekday": 0, "contributionLevel": "FOURTH_QUARTILE" },
+                { "weekday": 1, "contributionLevel": "FOURTH_QUARTILE" },
+                { "weekday": 2, "contributionLevel": "THIRD_QUARTILE" }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
+}
