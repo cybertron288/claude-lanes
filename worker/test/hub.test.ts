@@ -100,7 +100,7 @@ describe("StatusHubCore", () => {
     expect(sent).toHaveLength(0);
     setFail(false);
     await core.alarm();
-    expect(JSON.parse(sent[0]!).seg[0]).toMatchObject({ id: 0, stop: 16, fx: 2 });
+    expect(JSON.parse(sent[0]!).seg[0]).toMatchObject({ id: 0, stop: 1, fx: 0, col: [[255, 150, 0]] });
   });
 
   test("event() resolves true once published, and true again for a no-op repeat", async () => {
@@ -157,6 +157,6 @@ describe("StatusHubCore", () => {
     while (releases.length === 0) await Bun.sleep(1);
     releases.shift()!();
     await Promise.all([first, second]);
-    expect(JSON.parse(sent.at(-1)!).seg[0]).toMatchObject({ id: 0, stop: 16, fx: 2 });
+    expect(JSON.parse(sent.at(-1)!).seg[0]).toMatchObject({ id: 0, stop: 1, fx: 0, col: [[255, 150, 0]] });
   });
 });

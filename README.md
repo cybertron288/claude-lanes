@@ -12,9 +12,11 @@ its state, and the bottom 2 rows are its color strip:
 | done | green pulse for 20 s after a task finishes, then dim steady green |
 | error | red blink (an API error ended the turn; failed tool calls do not count) |
 
-When any session waits for you (a permission dialog, a question, a plan to
-approve), the top 6 rows pulse amber across the whole panel. Only the waiting
-sessions' strips stay lit. With no sessions alive, the panel shows your GitHub
+When a session waits for you (a permission dialog, a question, a plan to
+approve), its lane turns solid amber and the columns either side of it breathe
+amber. The other lanes keep running, dimmed. A waiting session past the 8th
+lane has no column to light, so then the top 6 rows pulse amber across the
+whole panel instead. With no sessions alive, the panel shows your GitHub
 contribution graph.
 
 It works for sessions on any machine. Nothing but the lane state and color
