@@ -8,9 +8,7 @@ Claude Code session status on a 16×8 WLED LED matrix. Each interactive session
 gets a lane. A waiting session's lane turns solid amber between two breathing
 amber columns while the other lanes dim (Spotlight). With no
 live sessions, or when every lane has been `done`/`error` for `IDLE_MS` (10 min),
-the panel shows the GitHub contribution graph. `README.md` has
-setup; the spec (`docs/superpowers/specs/2026-10-29-cc-status-light-design.md`)
-holds settled decisions, and the plan (`docs/superpowers/plans/`) the build order.
+the panel shows the GitHub contribution graph. `README.md` has setup.
 
 ## Architecture
 
