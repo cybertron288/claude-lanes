@@ -25,14 +25,15 @@ With no sessions alive, or when every session has been done or in error for
 in greens only, with a slow, looping warm sunrise along the bottom row. A
 working or waiting session never counts as idle.
 
-It works for sessions on any machine. Nothing but the lane state and color
-leaves a Mac: no prompts, paths or repo names.
+It works on any machine that runs Claude Code: macOS, Linux or Windows, all
+on one panel. Nothing but the lane state and color leaves the machine: no
+prompts, paths or repo names.
 
 ```
-Claude Code mod (each Mac) ─HTTPS + bearer─▶ Cloudflare Worker + Durable Object
-                                                 │ composes the WLED state
-                                                 ▼
-                    public MQTT broker (WSS, retained) ─▶ WLED (plaintext 1883)
+Claude Code mod (each machine) ─HTTPS + bearer─▶ Cloudflare Worker + Durable Object
+                                                     │ composes the WLED state
+                                                     ▼
+                        public MQTT broker (WSS, retained) ─▶ WLED (plaintext 1883)
 ```
 
 ## 1. Set up WLED
@@ -88,7 +89,7 @@ Answer `y` to add the marketplace, then pick a scope. On the options screen, set
 
 From a shell, the same install is
 `claude plugin install cc-status-light --marketplace cybertron288/claude-lanes`.
-Install it the same way on every Mac; all of them use the same Worker URL and
+Install it the same way on every machine; all of them use the same Worker URL and
 token. To get a newer version later, run
 `claude plugin update cc-status-light@cc-status-light`.
 
