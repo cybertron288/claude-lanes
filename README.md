@@ -3,8 +3,10 @@
 Claude Code session status on a 16×8 WLED LED matrix. The mod inside is
 `cc-status-light`.
 
-Each interactive Claude Code session gets a 1-column lane. The top 6 rows show
-its state, and the bottom 2 rows are its color strip:
+Each interactive Claude Code session gets a 1-column lane, with a dark column
+between lanes, so the panel shows up to 8 sessions (lane 1 is the leftmost
+column). The top 6 rows show its state, and the bottom 2 rows are its color
+strip:
 
 | State | Look |
 |---|---|
@@ -19,30 +21,39 @@ lane has no column to light, so then the top 6 rows pulse amber across the
 whole panel instead.
 
 With no sessions alive, or when every session has been done or in error for
-10 minutes, the panel shows your GitHub contribution graph in rows 1–7, with a
-slow, looping warm sunrise glow along the bottom row (the graph itself is green only). A working or waiting session
-never counts as idle.
+10 minutes, the panel shows your GitHub contribution graph in the top 7 rows,
+in greens only, with a slow, looping warm sunrise along the bottom row. A
+working or waiting session never counts as idle.
 
-It works for sessions on any machine. Nothing but the lane state and color
-leaves a Mac: no prompts, paths or repo names.
+It works on any machine that runs Claude Code: macOS, Linux or Windows, all
+on one panel. Nothing but the lane state and color leaves the machine: no
+prompts, paths or repo names.
 
 ```
-Claude Code mod (each Mac) ─HTTPS + bearer─▶ Cloudflare Worker + Durable Object
-                                                 │ composes the WLED state
-                                                 ▼
-                    public MQTT broker (WSS, retained) ─▶ WLED (plaintext 1883)
+Claude Code mod (each machine) ─HTTPS + bearer─▶ Cloudflare Worker + Durable Object
+                                                     │ composes the WLED state
+                                                     ▼
+                        public MQTT broker (WSS, retained) ─▶ WLED (plaintext 1883)
 ```
 
 ## 1. Set up WLED
 
-1. In WLED, open **Config → Sync Interfaces → MQTT**.
-2. Turn MQTT on. Set the broker to `broker.emqx.io`, port `1883`.
-3. Set **Device Topic** to a random string of 24 characters. That string is the
+Use WLED 0.14 or later. An ESP32 shows everything; an ESP8266 supports only 16
+segments, so it skips the amber glow beside a waiting lane (the lane itself
+still turns amber).
+
+1. Open **Config → LED Preferences**. Set the LED count to `128` and turn on
+   **Turn LEDs on after power up/reset**.
+2. Open **Config → 2D Configuration**. Set a 16×8 matrix with the first LED
+   corner and serpentine setting that match your panel's wiring.
+3. Open **Config → Sync Interfaces → MQTT**. Turn MQTT on. Set the broker to
+   `broker.emqx.io`, port `1883`, no username or password.
+4. Set **Device Topic** to a random string of 24 characters. That string is the
    only thing that keeps your panel's topic private. Keep it; the Worker needs it.
-4. Open **Config → LED Preferences** and turn on **Turn LEDs on after power up/reset**.
 5. Save, and let WLED reboot.
 
-The matrix must already be set up as a 16×8 2D matrix.
+To check the orientation, start one session: its lane must be the leftmost
+column, with the color strip in the bottom 2 rows.
 
 ## 2. Deploy the Worker
 
@@ -53,7 +64,7 @@ bun install
 cd worker
 bunx wrangler deploy
 bunx wrangler secret put MQTT_TOPIC        # the WLED device topic
-bunx wrangler secret put INGEST_TOKEN      # a long random string; the mods send it
+bunx wrangler secret put INGEST_TOKEN      # a long random string, e.g. from `openssl rand -hex 32`
 bunx wrangler secret put GITHUB_TOKEN      # a GitHub token that can read your contributions
 bunx wrangler secret put GITHUB_USERNAME
 ```
@@ -72,13 +83,15 @@ At the prompt of a terminal Claude Code session:
 
 Answer `y` to add the marketplace, then pick a scope. On the options screen, set:
 
-- **Worker URL**: the URL `wrangler deploy` printed
+- **Worker URL**: the URL `wrangler deploy` printed, e.g.
+  `https://cc-status-light.<account>.workers.dev`
 - **Ingest token**: the `INGEST_TOKEN` you set
 
 From a shell, the same install is
 `claude plugin install cc-status-light --marketplace cybertron288/claude-lanes`.
-The repository is private, so the machine needs a git credential for github.com
-(`gh auth login`, then `gh auth setup-git`).
+Install it the same way on every machine; all of them use the same Worker URL and
+token. To get a newer version later, run
+`claude plugin update cc-status-light@cc-status-light`.
 
 Only interactive sessions get a lane. `claude -p`, SDK runs and scheduled runs
 never show.

@@ -8,17 +8,15 @@ Claude Code session status on a 16×8 WLED LED matrix. Each interactive session
 gets a lane. A waiting session's lane turns solid amber between two breathing
 amber columns while the other lanes dim (Spotlight). With no
 live sessions, or when every lane has been `done`/`error` for `IDLE_MS` (10 min),
-the panel shows the GitHub contribution graph. `README.md` has
-setup; the spec (`docs/superpowers/specs/2026-10-29-cc-status-light-design.md`)
-holds settled decisions, and the plan (`docs/superpowers/plans/`) the build order.
+the panel shows the GitHub contribution graph. `README.md` has setup.
 
 ## Architecture
 
 ```
-Claude Code mod (each Mac) ─HTTPS+bearer─▶ Cloudflare Worker + Durable Object
-                                              │ composes WLED JSON state
-                                              ▼
-                     public MQTT broker (WSS, retained) ─▶ WLED (plaintext 1883)
+Claude Code mod (each machine) ─HTTPS+bearer─▶ Cloudflare Worker + Durable Object
+                                                  │ composes WLED JSON state
+                                                  ▼
+                         public MQTT broker (WSS, retained) ─▶ WLED (plaintext 1883)
 ```
 
 - **Mod** (`mod/cc-status-light/hooks/`): `register.ts` wires engine events into
@@ -79,7 +77,7 @@ Claude Code mod (each Mac) ─HTTPS+bearer─▶ Cloudflare Worker + Durable Obj
 - Report only interactive sessions (`session.start` `isInteractive === true`).
 - Lanes key on a terminal key, held in a module variable (survives `/clear`,
   `/resume`) mirrored into `$.state` (survives a reload).
-- Nothing leaves a Mac except `{terminal, state | color}`. MQTT payloads carry
+- Nothing leaves a machine except `{terminal, state | color}`. MQTT payloads carry
   only WLED state. The topic is a secret: never commit or print it.
 - Layout: lanes 1 column wide at x = 0, 2, 4 … 14 (max 8; a 9th is tracked
   with `slot: null`). Rows 0–5 show state, rows 6–7 the color strip.
