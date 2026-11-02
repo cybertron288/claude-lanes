@@ -1,6 +1,6 @@
 import type { ClientEvent, RGB } from "../../shared/protocol";
 import { compose, type WledState } from "./compose";
-import { apply, expire, pulseEnd, type Hub } from "./lanes";
+import { apply, expire, idleAt, pulseEnd, type Hub } from "./lanes";
 import { pickDistinctColor } from "./palette";
 
 export type Store = {
@@ -85,9 +85,12 @@ export class StatusHubCore {
     await this.flush(false);
   }
 
-  // When the panel next needs a republish: a done pulse ending, else null.
+  // When the panel next needs a republish: a done pulse ending or a lane turning
+  // idle, whichever is first, else null.
   async wakeAt(): Promise<number | null> {
-    return pulseEnd(await this.hub(), this.clock());
+    const hub = await this.hub(), now = this.clock();
+    const times = [pulseEnd(hub, now), idleAt(hub, now)].filter((t): t is number => t !== null);
+    return times.length > 0 ? Math.min(...times) : null;
   }
 
   async hasIdle(): Promise<boolean> {

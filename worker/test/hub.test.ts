@@ -33,7 +33,7 @@ function setup() {
   };
 }
 
-const grid: RGB[] = Array.from({ length: 128 }, () => [0, 109, 50]);
+const grid: RGB[] = Array.from({ length: 128 }, () => [0, 109, 0]);
 
 describe("StatusHubCore", () => {
   test("an event that changes the composed output publishes once", async () => {
@@ -73,6 +73,21 @@ describe("StatusHubCore", () => {
     tick(20_000);
     await core.alarm();
     expect(JSON.parse(sent.at(-1)!).seg[0]).toMatchObject({ id: 0, fx: 0 });
+    expect(await core.wakeAt()).toBe(6000 + 10 * 60_000);
+  });
+
+  test("a finished lane goes quiet for 10 minutes, then alarm() switches the panel to the graph", async () => {
+    const { core, sent, tick } = setup();
+    await core.refreshIdle(async () => grid);
+    await core.event({ kind: "state", terminal: "a", state: "working" });
+    await core.event({ kind: "state", terminal: "a", state: "done" });
+    expect(JSON.parse(sent.at(-1)!).seg[0]).toMatchObject({ id: 0, stop: 1 });
+    expect(await core.wakeAt()).toBe(1000 + 20_000);
+    tick(20_000);
+    expect(await core.wakeAt()).toBe(1000 + 10 * 60_000);
+    tick(10 * 60_000 - 20_000);
+    await core.alarm();
+    expect(JSON.parse(sent.at(-1)!).seg[0]).toMatchObject({ id: 0, stop: 16, i: expect.any(Array) });
     expect(await core.wakeAt()).toBeNull();
   });
 
@@ -90,7 +105,7 @@ describe("StatusHubCore", () => {
   test("refreshIdle success with no lanes publishes the new idle frame", async () => {
     const { core, sent } = setup();
     await core.refreshIdle(async () => grid);
-    expect(JSON.parse(sent[0]!).seg[0].i[0]).toBe("006D32");
+    expect(JSON.parse(sent[0]!).seg[0].i[0]).toBe("006D00");
   });
 
   test("a failing publisher never throws out of event(), and the next alarm() publishes", async () => {
@@ -100,7 +115,7 @@ describe("StatusHubCore", () => {
     expect(sent).toHaveLength(0);
     setFail(false);
     await core.alarm();
-    expect(JSON.parse(sent[0]!).seg[0]).toMatchObject({ id: 0, stop: 16, fx: 2 });
+    expect(JSON.parse(sent[0]!).seg[0]).toMatchObject({ id: 0, stop: 1, fx: 0, col: [[255, 150, 0]] });
   });
 
   test("event() resolves true once published, and true again for a no-op repeat", async () => {
@@ -157,6 +172,6 @@ describe("StatusHubCore", () => {
     while (releases.length === 0) await Bun.sleep(1);
     releases.shift()!();
     await Promise.all([first, second]);
-    expect(JSON.parse(sent.at(-1)!).seg[0]).toMatchObject({ id: 0, stop: 16, fx: 2 });
+    expect(JSON.parse(sent.at(-1)!).seg[0]).toMatchObject({ id: 0, stop: 1, fx: 0, col: [[255, 150, 0]] });
   });
 });
